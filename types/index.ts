@@ -91,15 +91,13 @@ export interface TimelineEntry {
 
 export type QuoteStatus =
   | 'Draft'
-  | 'Pending Approval'
-  | 'Approved'
   | 'Shared'
   | 'Follow-Up'
   | 'Negotiation'
   | 'Accepted'
   | 'Rejected'
   | 'Expired'
-  | 'Converted to PO';
+  | 'Converted to SO';
 
 export interface QuoteLineItem {
   productId: string;
@@ -153,6 +151,7 @@ export interface FollowUp {
 export interface PurchaseOrder {
   id: string;
   poNumber: string;
+  soNumber?: string;
   quoteId: string;
   quoteNumber: string;
   rfqNumber: string;
@@ -165,7 +164,10 @@ export interface PurchaseOrder {
   deliveryCharges: number;
   terms: string;
   poDate: string;
-  status: 'Active' | 'Delivered' | 'Cancelled';
+  dispatchDate?: string;
+  dueDate?: string;
+  trackingId?: string;
+  status: 'Active' | 'Dispatched' | 'Delivered' | 'Cancelled';
 }
 
 export type CustomerStatus = 'Active' | 'Inactive';

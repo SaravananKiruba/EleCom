@@ -17,7 +17,7 @@ export default function AdminDashboard() {
     customers: customers.length,
     architects: architects.filter(a => a.status === 'Active' || a.status === 'Approved').length,
     pendingRFQs: rfqs.filter(r => r.status === 'New').length,
-    pendingQuotes: quotes.filter(q => q.status === 'Pending Approval').length,
+    pendingQuotes: quotes.filter(q => q.status === 'Draft').length,
     followUpsDue: followUps.filter(f => f.status === 'Scheduled' && f.nextFollowUp <= '2026-08-22').length,
     wonQuotes: quotes.filter(q => q.status === 'Accepted').length,
     lostQuotes: quotes.filter(q => q.status === 'Rejected').length,
@@ -55,7 +55,7 @@ export default function AdminDashboard() {
         <KPICard label="Total Customers" value={kpis.customers} icon="👥" colorScheme="blue" />
         <KPICard label="Architects" value={kpis.architects} icon="🏛️" colorScheme="purple" />
         <KPICard label="Pending RFQs" value={kpis.pendingRFQs} icon="📋" colorScheme="orange" />
-        <KPICard label="Pending Approvals" value={kpis.pendingQuotes} icon="⏳" colorScheme="red" />
+        <KPICard label="Pending Quotes" value={kpis.pendingQuotes} icon="⏳" colorScheme="red" />
         <KPICard label="Follow-ups Due" value={kpis.followUpsDue} icon="📅" colorScheme="orange" />
         <KPICard label="Won Quotes" value={kpis.wonQuotes} icon="🏆" colorScheme="green" />
         <KPICard label="Lost Quotes" value={kpis.lostQuotes} icon="📉" colorScheme="red" />
@@ -156,7 +156,7 @@ export default function AdminDashboard() {
               { label: 'Follow-up / Negotiation', color: 'orange', statuses: ['Follow-Up', 'Negotiation'] },
               { label: 'Accepted', color: 'green', statuses: ['Accepted'] },
               { label: 'Rejected', color: 'red', statuses: ['Rejected'] },
-              { label: 'Draft / Pending', color: 'gray', statuses: ['Draft', 'Pending Approval', 'Approved'] },
+              { label: 'Draft', color: 'gray', statuses: ['Draft'] },
             ].map(g => {
               const count = quotes.filter(q => g.statuses.includes(q.status)).length;
               const pct = quotes.length ? Math.round((count / quotes.length) * 100) : 0;

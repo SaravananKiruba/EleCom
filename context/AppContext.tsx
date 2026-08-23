@@ -33,6 +33,7 @@ type Action =
   | { type: 'ADD_FOLLOW_UP'; payload: FollowUp }
   | { type: 'UPDATE_FOLLOW_UP'; payload: FollowUp }
   | { type: 'ADD_PO'; payload: PurchaseOrder }
+  | { type: 'UPDATE_PO'; payload: PurchaseOrder }
   | { type: 'UPDATE_ARCHITECT'; payload: Architect }
   | { type: 'ADD_ARCHITECT'; payload: Architect }
   | { type: 'UPDATE_CUSTOMER'; payload: Customer }
@@ -83,6 +84,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, followUps: state.followUps.map(f => f.id === action.payload.id ? action.payload : f) };
     case 'ADD_PO':
       return { ...state, purchaseOrders: [action.payload, ...state.purchaseOrders] };
+    case 'UPDATE_PO':
+      return { ...state, purchaseOrders: state.purchaseOrders.map(p => p.id === action.payload.id ? action.payload : p) };
     case 'UPDATE_ARCHITECT':
       return { ...state, architects: state.architects.map(a => a.id === action.payload.id ? action.payload : a) };
     case 'ADD_ARCHITECT':

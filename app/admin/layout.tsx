@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { href: '/admin/customers', label: 'Customers', icon: '👥' },
   { href: '/admin/architects', label: 'Architects', icon: '🏛️' },
   { href: '/admin/products', label: 'Products', icon: '📦' },
-  { href: '/admin/purchase-orders', label: 'Purchase Orders', icon: '🛒' },
+  { href: '/admin/purchase-orders', label: 'Sales Orders', icon: '📦' },
   { href: '/admin/reports', label: 'Reports', icon: '📈' },
 ];
 
@@ -78,7 +78,7 @@ function SidebarContent({ pathname, onClose }: { pathname: string; onClose?: () 
         <Link href="/" style={{ textDecoration: 'none' }}>
           <Flex align="center" gap={3} px={3} py={2.5} rounded="lg" _hover={{ bg: 'gray.50' }} cursor="pointer">
             <Text fontSize="md">🌐</Text>
-            <Text fontSize="sm" fontWeight={500} color="gray.600">Customer Portal</Text>
+            <Text fontSize="sm" fontWeight={500} color="gray.600">Public Portal</Text>
           </Flex>
         </Link>
       </Box>

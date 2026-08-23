@@ -125,7 +125,7 @@ export default function AdminProductsPage() {
       {/* Add Product Dialog */}
       <DialogRoot open={formOpen} onOpenChange={d => setFormOpen(d.open)} size="lg">
         <DialogBackdrop />
-        <DialogContent>
+        <DialogContent maxW={{ base: '95vw', md: '520px' }} mx="auto">
           <DialogHeader><Text fontWeight={700}>Add Product</Text><DialogCloseTrigger /></DialogHeader>
           <DialogBody>
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>

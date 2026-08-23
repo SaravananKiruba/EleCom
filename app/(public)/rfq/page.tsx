@@ -87,7 +87,7 @@ export default function RFQPage() {
           <Text fontSize="4xl" mb={4}>✅</Text>
           <Text fontSize="2xl" fontWeight={800} color="gray.900" mb={2}>Quote Request Submitted!</Text>
           <Text color="gray.600" fontSize="md" mb={6}>
-            Our team will review your requirement and get back to you within 24 hours.
+            Our team will review your requirement and send you a competitive quote <Text as="span" fontWeight={700} color="green.600">within 10 minutes</Text>.
           </Text>
           <Box bg="white" rounded="xl" p={5} border="1px solid" borderColor="gray.100" mb={6} textAlign="left">
             <SimpleGrid columns={2} gap={3}>

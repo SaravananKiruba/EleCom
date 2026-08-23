@@ -172,10 +172,10 @@ export default function QuotationViewPage() {
         )}
       </Box>
 
-      {/* Reject Modal */}
+      {/* Reject Modal — responsive */}
       <DialogRoot open={rejectOpen} onOpenChange={d => setRejectOpen(d.open)}>
         <DialogBackdrop />
-        <DialogContent>
+        <DialogContent maxW={{ base: '95vw', md: '480px' }} mx="auto">
           <DialogHeader>
             <Text fontWeight={700}>Reject Quote</Text>
             <DialogCloseTrigger />

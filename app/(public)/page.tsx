@@ -24,7 +24,7 @@ export default function HomePage() {
     <Box>
       {/* Hero */}
       <Box
-        bg="linear-gradient(135deg, #0f2166 0%, #1a56db 60%, #2d7dd2 100%)"
+        bg="linear-gradient(135deg, #37463e 0%, #5a6e63 55%, #6b8375 100%)"
         color="white"
         py={{ base: 14, md: 24 }}
         px={{ base: 4, md: 6 }}
@@ -33,14 +33,14 @@ export default function HomePage() {
           <Flex align="center" justify="space-between" gap={10} flexWrap="wrap">
             <Box maxW="600px">
               <Badge bg="rgba(255,255,255,0.15)" color="white" mb={4} px={3} py={1} rounded="full" fontSize="xs" fontWeight={600}>
-                🇮🇳 India&apos;s B2B Electrical Platform
+                🇮🇳 India's #1 LED Lighting Platform
               </Badge>
               <Text fontSize={{ base: '3xl', md: '5xl' }} fontWeight={800} lineHeight="1.1" mb={4}>
-                Premium Electrical Products for{' '}
-                <Text as="span" color="yellow.300">Professionals</Text>
+                Premium LED Lighting for{' '}
+                <Text as="span" color="yellow.300">Every Space</Text>
               </Text>
               <Text fontSize={{ base: 'md', md: 'lg' }} color="blue.100" mb={8} lineHeight="relaxed">
-                Discover 1000+ electrical products from top brands. Get competitive quotes, manage projects, and streamline procurement — all in one platform.
+                From indoor panels to industrial high bays — discover top-brand LED solutions. Get competitive quotes in under 10 minutes, tailored for your project.
               </Text>
               <Box as="form" onSubmit={handleSearch}>
                 <Flex gap={2} maxW="520px" bg="white" rounded="xl" p={1.5} shadow="xl">
@@ -62,7 +62,7 @@ export default function HomePage() {
                 </Flex>
               </Box>
               <HStack gap={6} mt={6} flexWrap="wrap">
-                {['50+ Brands', '1000+ Products', 'Fast Quotes', 'GST Invoice'].map(t => (
+                {['50+ Light Types', '200+ Products', 'Quote in 10 min', 'Architect Discounts'].map(t => (
                   <HStack key={t} gap={1}>
                     <Text color="green.300" fontSize="sm">✓</Text>
                     <Text fontSize="sm" color="blue.100">{t}</Text>
@@ -74,7 +74,7 @@ export default function HomePage() {
               <Box bg="rgba(255,255,255,0.1)" rounded="2xl" p={8} backdropFilter="blur(10px)" border="1px solid rgba(255,255,255,0.2)">
                 <VStack gap={4} align="stretch" minW="260px">
                   <Text fontWeight={700} fontSize="sm" color="blue.100" textTransform="uppercase" letterSpacing="wide">Quick Request</Text>
-                  {['LED Panel Lights', 'MCBs & Switchgear', 'Fans & Fixtures'].map(i => (
+                  {['LED Panel Lights', 'High Bay Lights', 'Flood & Street Lights'].map(i => (
                     <Link key={i} href={`/catalogue?q=${encodeURIComponent(i)}`} style={{ textDecoration: 'none' }}>
                       <Flex bg="rgba(255,255,255,0.1)" rounded="lg" px={4} py={3} align="center" justify="space-between" _hover={{ bg: 'rgba(255,255,255,0.2)' }} cursor="pointer">
                         <Text fontSize="sm" fontWeight={500}>{i}</Text>

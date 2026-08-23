@@ -10,6 +10,7 @@ import { useParams, notFound } from 'next/navigation';
 import { useState } from 'react';
 import { products, brands, categories } from '@/data/mockData';
 import { useAppState } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { toaster } from '@/components/ui/toaster';
 
 export default function ProductDetailPage() {
@@ -18,6 +19,7 @@ export default function ProductDetailPage() {
   const product = products.find(p => p.slug === slug);
 
   const { dispatch } = useAppState();
+  const { user } = useAuth();
   const [qty, setQty] = useState(1);
   const [selectedImg, setSelectedImg] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(product?.variants[0] || '');
@@ -28,6 +30,15 @@ export default function ProductDetailPage() {
   const category = categories.find(c => c.id === product.categoryId);
   const subcategory = category?.subcategories.find(s => s.id === product.subcategoryId);
   const relatedProducts = products.filter(p => p.categoryId === product.categoryId && p.id !== product.id).slice(0, 4);
+
+  const PLACEMENT: Record<string, { rooms: string[]; mount: string; height: string; icon: string }> = {
+    'sub-1': { rooms: ['Office', 'Retail', 'Hospital', 'Meeting Room'], mount: 'Recessed ceiling', height: '2.5–4m', icon: '🏢' },
+    'sub-2': { rooms: ['Corridor', 'Warehouse', 'Garage', 'Home'], mount: 'Surface ceiling mount', height: '2.5–6m', icon: '🏠' },
+    'sub-3': { rooms: ['Boutique Retail', 'Gallery', 'Hotel Lobby', 'Restaurant'], mount: 'Track / adjustable arm', height: '2.5–4m', icon: '🛒' },
+    'sub-12': { rooms: ['Warehouse', 'Factory', 'Sports Hall', 'Logistics'], mount: 'Pendant ceiling (chain/rod)', height: '6–14m', icon: '🏗️' },
+    'sub-13': { rooms: ['Parking', 'Street', 'Stadium', 'Boundary Wall'], mount: 'Pole / wall bracket', height: '4–10m', icon: '🛣️' },
+  };
+  const placement = PLACEMENT[product.subcategoryId];
 
   const addToCart = () => {
     dispatch({ type: 'ADD_TO_CART', payload: { productId: product.id, quantity: qty } });
@@ -88,8 +99,22 @@ export default function ProductDetailPage() {
           <Text fontSize="sm" color="gray.600" lineHeight="relaxed" mb={4}>{product.description}</Text>
           
           <Box bg="blue.50" rounded="xl" p={4} mb={5} border="1px solid" borderColor="blue.100">
-            <Text fontSize="sm" fontWeight={600} color="blue.700">💰 Price available on request</Text>
-            <Text fontSize="xs" color="blue.600" mt={1}>Contact us or add to your quote cart for a competitive price.</Text>
+            {user.role === 'architect' && user.discount ? (
+              <>
+                <Text fontSize="sm" fontWeight={600} color="blue.700">🏷️ Architect Price (your {user.discount}% discount applied)</Text>
+                <Text fontSize="xs" color="blue.600" mt={1}>Exact pricing shared in your quotation. Discount auto-applied on quote.</Text>
+              </>
+            ) : user.role === 'customer' ? (
+              <>
+                <Text fontSize="sm" fontWeight={600} color="blue.700">💰 Price available on quote</Text>
+                <Text fontSize="xs" color="blue.600" mt={1}>Add to cart and submit an RFQ to receive a competitive quote in 10 minutes.</Text>
+              </>
+            ) : (
+              <>
+                <Text fontSize="sm" fontWeight={600} color="blue.700">💰 Price on Request</Text>
+                <Text fontSize="xs" color="blue.600" mt={1}><Link href="/login" style={{ color: '#6b8375', fontWeight: 700 }}>Sign in</Link> or add to cart to get a quote in 10 minutes.</Text>
+              </>
+            )}
           </Box>
 
           {/* Variants */}
@@ -154,7 +179,7 @@ export default function ProductDetailPage() {
       </SimpleGrid>
 
       {/* Tabs */}
-      <Box bg="white" rounded="2xl" p={6} border="1px solid" borderColor="gray.100" shadow="sm" mb={10}>
+      <Box bg="white" rounded="2xl" p={6} border="1px solid" borderColor="gray.100" shadow="sm" mb={6}>
         <TabsRoot defaultValue="specs">
           <TabsList mb={4} borderBottom="1px solid" borderColor="gray.100">
             <TabsTrigger value="specs">Specifications</TabsTrigger>
@@ -182,6 +207,38 @@ export default function ProductDetailPage() {
           </TabsContent>
         </TabsRoot>
       </Box>
+
+      {/* Placement Guide */}
+      {placement && (
+        <Box bg="white" rounded="2xl" p={6} border="1px solid" borderColor="gray.100" shadow="sm" mb={6}>
+          <Text fontWeight={700} fontSize="lg" color="gray.900" mb={4}>💡 Where to Install This Light</Text>
+          <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+            <Box bg="blue.50" rounded="xl" p={5} border="1px solid" borderColor="blue.100">
+              <Text fontSize="2xl" mb={2}>{placement.icon}</Text>
+              <Text fontWeight={700} fontSize="sm" color="blue.800" mb={2}>Ideal Spaces</Text>
+              <VStack align="stretch" gap={1}>
+                {placement.rooms.map(r => (
+                  <HStack key={r} gap={2}>
+                    <Text color="blue.500" fontSize="xs">▸</Text>
+                    <Text fontSize="sm" color="blue.700">{r}</Text>
+                  </HStack>
+                ))}
+              </VStack>
+            </Box>
+            <Box bg="gray.50" rounded="xl" p={5} border="1px solid" borderColor="gray.100">
+              <Text fontSize="2xl" mb={2}>🔧</Text>
+              <Text fontWeight={700} fontSize="sm" color="gray.700" mb={2}>Mounting Type</Text>
+              <Text fontSize="sm" color="gray.600">{placement.mount}</Text>
+            </Box>
+            <Box bg="green.50" rounded="xl" p={5} border="1px solid" borderColor="green.100">
+              <Text fontSize="2xl" mb={2}>📐</Text>
+              <Text fontWeight={700} fontSize="sm" color="green.800" mb={2}>Recommended Height</Text>
+              <Text fontSize="sm" color="green.700">{placement.height} above floor</Text>
+              <Text fontSize="xs" color="green.600" mt={2}>For optimal illumination and energy efficiency</Text>
+            </Box>
+          </SimpleGrid>
+        </Box>
+      )}
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (

@@ -98,7 +98,7 @@ export default function ArchitectsPage() {
       {/* Detail Drawer */}
       <DrawerRoot open={drawerOpen} onOpenChange={d => setDrawerOpen(d.open)} placement="end" size="md">
         <DrawerBackdrop />
-        <DrawerContent>
+        <DrawerContent maxW={{ base: '100vw', md: '480px' }}>
           <DrawerHeader borderBottom="1px solid" borderColor="gray.100">
             <Text fontWeight={700}>{selected?.name}</Text>
             <DrawerCloseTrigger />
@@ -177,7 +177,7 @@ export default function ArchitectsPage() {
       {/* Discount Dialog */}
       <DialogRoot open={discountOpen} onOpenChange={d => setDiscountOpen(d.open)}>
         <DialogBackdrop />
-        <DialogContent>
+        <DialogContent maxW={{ base: '95vw', md: '480px' }} mx="auto">
           <DialogHeader><Text fontWeight={700}>Assign / Edit Discount</Text><DialogCloseTrigger /></DialogHeader>
           <DialogBody>
             <VStack gap={4} align="stretch">

@@ -82,15 +82,16 @@ export default function AdminRFQsPage() {
       projectName: rfq.projectName,
       lineItems: rfq.items.map(i => ({ productId: i.productId, quantity: i.quantity, basePrice: 1000, discount: 5, tax: 18 })),
       deliveryCharges: 2500,
-      terms: 'Payment within 30 days. Delivery 15 working days from PO.',
+      terms: 'Payment within 30 days. Delivery 15 working days from SO.',
       validUntil: '2026-09-22',
-      status: 'Draft',
+      status: 'Shared',
       createdAt: '2026-08-22',
+      sharedAt: '2026-08-22',
       assignedTo: rfq.assignedTo,
     };
     dispatch({ type: 'ADD_QUOTE', payload: newQuote });
-    updateStatus(rfq, 'Quote Ready', 'Quote created');
-    toaster.create({ title: `Quote ${quoteNumber} created!`, description: 'Go to Quotations to edit and approve.', type: 'success', duration: 3000 });
+    updateStatus(rfq, 'Quote Ready', 'Quote created and shared');
+    toaster.create({ title: `Quote ${quoteNumber} created & shared!`, description: 'Customer will receive it within 10 minutes.', type: 'success', duration: 3000 });
   };
 
   return (
@@ -171,7 +172,7 @@ export default function AdminRFQsPage() {
       {/* Detail Drawer */}
       <DrawerRoot open={detailOpen} onOpenChange={d => setDetailOpen(d.open)} placement="end" size="lg">
         <DrawerBackdrop />
-        <DrawerContent>
+        <DrawerContent maxW={{ base: '100vw', md: '540px' }}>
           <DrawerHeader borderBottom="1px solid" borderColor="gray.100">
             <HStack gap={2}>
               <Text fontWeight={800} fontFamily="mono" color="blue.700">{selectedRFQ?.rfqNumber}</Text>

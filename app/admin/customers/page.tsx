@@ -101,7 +101,7 @@ export default function CustomersPage() {
       {/* Detail Drawer */}
       <DrawerRoot open={detailOpen} onOpenChange={d => setDetailOpen(d.open)} placement="end" size="md">
         <DrawerBackdrop />
-        <DrawerContent>
+        <DrawerContent maxW={{ base: '100vw', md: '480px' }}>
           <DrawerHeader borderBottom="1px solid" borderColor="gray.100">
             <Text fontWeight={700}>{selected?.name}</Text>
             <DrawerCloseTrigger />
@@ -148,7 +148,7 @@ export default function CustomersPage() {
       {/* Confirm Dialog */}
       <DialogRoot open={confirmOpen} onOpenChange={d => setConfirmOpen(d.open)}>
         <DialogBackdrop />
-        <DialogContent>
+        <DialogContent maxW={{ base: '95vw', md: '520px' }} mx="auto">
           <DialogHeader>
             <Text fontWeight={700}>{pendingToggle?.status === 'Active' ? 'Deactivate' : 'Activate'} Customer</Text>
             <DialogCloseTrigger />

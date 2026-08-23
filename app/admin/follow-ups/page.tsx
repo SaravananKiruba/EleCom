@@ -107,7 +107,7 @@ export default function FollowUpsPage() {
 
       <DialogRoot open={modalOpen} onOpenChange={d => setModalOpen(d.open)}>
         <DialogBackdrop />
-        <DialogContent>
+        <DialogContent maxW={{ base: '95vw', md: '520px' }} mx="auto">
           <DialogHeader><Text fontWeight={700}>{editTarget ? 'Edit Follow-up' : 'Add Follow-up'}</Text><DialogCloseTrigger /></DialogHeader>
           <DialogBody>
             <VStack gap={4} align="stretch">

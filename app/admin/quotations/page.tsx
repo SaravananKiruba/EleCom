@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 import {
-  Box, Text, Button, HStack, VStack, Flex, Separator, SimpleGrid, Textarea, Field, Input,
+  Box, Text, Button, HStack, VStack, Flex, Separator, SimpleGrid, Textarea, Field,
   DialogRoot, DialogBackdrop, DialogContent, DialogHeader, DialogBody, DialogFooter, DialogCloseTrigger,
   DrawerRoot, DrawerBackdrop, DrawerContent, DrawerHeader, DrawerBody, DrawerCloseTrigger,
 } from '@chakra-ui/react';
@@ -13,11 +13,11 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { products, brands } from '@/data/mockData';
-import { Quote, QuoteStatus, FollowUp, PurchaseOrder } from '@/types';
+import { Quote, QuoteStatus, PurchaseOrder } from '@/types';
 import { toaster } from '@/components/ui/toaster';
 
 const PAGE_SIZE = 10;
-const STATUSES: QuoteStatus[] = ['Draft', 'Pending Approval', 'Approved', 'Shared', 'Follow-Up', 'Negotiation', 'Accepted', 'Rejected', 'Expired', 'Converted to PO'];
+const STATUSES: QuoteStatus[] = ['Draft', 'Shared', 'Follow-Up', 'Negotiation', 'Accepted', 'Rejected', 'Expired', 'Converted to SO'];
 const LOST_REASONS = ['Price too high', 'Competitor', 'Requirement cancelled', 'Delivery timeline', 'Product unavailable', 'Project postponed', 'Budget issue', 'Other'];
 
 export default function AdminQuotationsPage() {
@@ -62,28 +62,26 @@ export default function AdminQuotationsPage() {
     toaster.create({ title: successMsg, type: 'success', duration: 2500 });
   };
 
-  const approve = () => update({ status: 'Approved', approvedAt: '2026-08-22' }, 'Quotation approved successfully!');
-  const sendBack = () => update({ status: 'Draft' }, 'Quote sent back to Draft.');
-
   const shareWhatsapp = () => {
-    update({ status: 'Shared', sharedAt: '2026-08-22' }, 'Quotation marked as shared via WhatsApp');
+    update({ status: 'Shared', sharedAt: '2026-08-22' }, 'Quotation shared via WhatsApp');
     setWhatsappOpen(false);
   };
 
   const markWon = () => {
     update({ status: 'Accepted' }, 'Quote marked as Won!');
     const q = selected!;
-    const po: PurchaseOrder = {
-      id: `po-${Date.now()}`,
-      poNumber: `PO-2026-${Math.floor(300000 + Math.random() * 99999)}`,
+    const soNum = `SO-2026-${Math.floor(300000 + Math.random() * 99999)}`;
+    const so: PurchaseOrder = {
+      id: `so-${Date.now()}`,
+      poNumber: soNum, soNumber: soNum,
       quoteId: q.id, quoteNumber: q.quoteNumber, rfqNumber: q.rfqNumber,
       customerId: q.customerId, customerName: q.customerName, companyName: q.companyName,
       billingAddress: `${q.companyName}, India`, deliveryAddress: `${q.projectName}, India`,
       lineItems: q.lineItems, deliveryCharges: q.deliveryCharges,
       terms: q.terms, poDate: '2026-08-22', status: 'Active',
     };
-    dispatch({ type: 'ADD_PO', payload: po });
-    toaster.create({ title: `PO ${po.poNumber} generated!`, type: 'success', duration: 3000 });
+    dispatch({ type: 'ADD_PO', payload: so });
+    toaster.create({ title: `Sales Order ${soNum} created!`, type: 'success', duration: 3000 });
   };
 
   const markLost = () => {
@@ -136,7 +134,7 @@ export default function AdminQuotationsPage() {
                       <Text fontSize="xs" color="gray.500">{qt.companyName}</Text>
                     </Box>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" color="gray.700">{qt.projectName}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700}>₹{grandTotal(qt).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700}>&#8377;{grandTotal(qt).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="xs" color={new Date(qt.validUntil) < new Date() ? 'red.500' : 'gray.600'}>{qt.validUntil}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="xs" color="gray.600">{qt.assignedTo || '—'}</Text></Box>
                     <Box as="td" px={4} py={3}><StatusBadge status={qt.status} /></Box>
@@ -152,12 +150,12 @@ export default function AdminQuotationsPage() {
       )}
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
-      {/* Detail Drawer */}
+      {/* Detail Drawer — full screen on mobile */}
       <DrawerRoot open={detailOpen} onOpenChange={d => setDetailOpen(d.open)} placement="end" size="lg">
         <DrawerBackdrop />
-        <DrawerContent>
-          <DrawerHeader borderBottom="1px solid" borderColor="gray.100">
-            <HStack gap={2}>
+        <DrawerContent maxW={{ base: '100vw', md: '540px' }}>
+          <DrawerHeader borderBottom="1px solid" borderColor="gray.100" flexShrink={0}>
+            <HStack gap={2} flexWrap="wrap">
               <Text fontWeight={800} fontFamily="mono" color="green.700">{selected?.quoteNumber}</Text>
               {selected && <StatusBadge status={selected.status} />}
             </HStack>
@@ -166,7 +164,7 @@ export default function AdminQuotationsPage() {
           <DrawerBody py={4} overflowY="auto">
             {selected && (
               <VStack gap={5} align="stretch">
-                <SimpleGrid columns={2} gap={3}>
+                <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
                   {[['Customer', selected.customerName], ['Company', selected.companyName], ['Project', selected.projectName], ['RFQ Ref', selected.rfqNumber], ['Valid Until', selected.validUntil], ['Assigned', selected.assignedTo || '—']].map(([l, v]) => (
                     <Box key={l}><Text fontSize="xs" color="gray.500">{l}</Text><Text fontSize="sm" fontWeight={600}>{v}</Text></Box>
                   ))}
@@ -179,14 +177,14 @@ export default function AdminQuotationsPage() {
                       const p = products.find(x => x.id === li.productId);
                       const b = brands.find(x => x.id === p?.brandId);
                       return (
-                        <Flex key={li.productId} justify="space-between" align="center" bg="gray.50" rounded="lg" px={3} py={2.5}>
-                          <Box>
+                        <Flex key={li.productId} justify="space-between" align="center" bg="gray.50" rounded="lg" px={3} py={2.5} gap={2} flexWrap="wrap">
+                          <Box minW={0}>
                             <Text fontSize="sm" fontWeight={600}>{p?.name}</Text>
                             <Text fontSize="xs" color="gray.500">{b?.name} • Qty: {li.quantity}</Text>
                           </Box>
-                          <Box textAlign="right">
-                            <Text fontSize="xs" color="gray.500">₹{li.basePrice} -{li.discount}% +{li.tax}%</Text>
-                            <Text fontSize="sm" fontWeight={700}>₹{lineTotal(li).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+                          <Box textAlign="right" flexShrink={0}>
+                            <Text fontSize="xs" color="gray.500">&#8377;{li.basePrice} -{li.discount}% +{li.tax}%</Text>
+                            <Text fontSize="sm" fontWeight={700}>&#8377;{lineTotal(li).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
                           </Box>
                         </Flex>
                       );
@@ -194,8 +192,8 @@ export default function AdminQuotationsPage() {
                   </VStack>
                   <Flex justify="flex-end" mt={3}>
                     <VStack align="stretch" minW="200px" gap={1} bg="blue.50" p={3} rounded="lg">
-                      <Flex justify="space-between"><Text fontSize="xs" color="gray.600">Delivery</Text><Text fontSize="xs" fontWeight={600}>₹{selected.deliveryCharges.toLocaleString()}</Text></Flex>
-                      <Flex justify="space-between"><Text fontSize="sm" fontWeight={700}>Total</Text><Text fontSize="sm" fontWeight={800} color="blue.700">₹{grandTotal(selected).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Flex>
+                      <Flex justify="space-between"><Text fontSize="xs" color="gray.600">Delivery</Text><Text fontSize="xs" fontWeight={600}>&#8377;{selected.deliveryCharges.toLocaleString()}</Text></Flex>
+                      <Flex justify="space-between"><Text fontSize="sm" fontWeight={700}>Total</Text><Text fontSize="sm" fontWeight={800} color="blue.700">&#8377;{grandTotal(selected).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Flex>
                     </VStack>
                   </Flex>
                 </Box>
@@ -204,26 +202,26 @@ export default function AdminQuotationsPage() {
                   <Text fontWeight={700} fontSize="sm" color="gray.600" mb={3} textTransform="uppercase" letterSpacing="wide">Actions</Text>
                   <VStack gap={2} align="stretch">
                     {selected.status === 'Draft' && (
-                      <Button colorPalette="orange" onClick={() => update({ status: 'Pending Approval' }, 'Sent for approval!')}>Send for Approval</Button>
-                    )}
-                    {selected.status === 'Pending Approval' && (
-                      <HStack gap={2}>
-                        <Button colorPalette="green" flex={1} onClick={approve}>✓ Approve Quote</Button>
-                        <Button colorPalette="orange" variant="outline" flex={1} onClick={sendBack}>↩ Send Back</Button>
-                      </HStack>
-                    )}
-                    {selected.status === 'Approved' && (
-                      <Button colorPalette="blue" onClick={() => setWhatsappOpen(true)}>💬 Share via WhatsApp</Button>
+                      <Button colorPalette="blue" onClick={() => setWhatsappOpen(true)}>💬 Share Quote via WhatsApp</Button>
                     )}
                     {['Shared', 'Follow-Up', 'Negotiation'].includes(selected.status) && (
-                      <HStack gap={2}>
-                        <Button colorPalette="green" flex={1} onClick={markWon}>🏆 Mark Won + Generate PO</Button>
-                        <Button colorPalette="red" variant="outline" flex={1} onClick={() => setLostOpen(true)}>✗ Mark Lost</Button>
-                      </HStack>
+                      <VStack gap={2} align="stretch">
+                        <Button colorPalette="blue" variant="ghost" size="sm" onClick={() => setWhatsappOpen(true)}>💬 Resend via WhatsApp</Button>
+                        <HStack gap={2}>
+                          <Button colorPalette="green" flex={1} onClick={markWon}>🏆 Won — Create Sales Order</Button>
+                          <Button colorPalette="red" variant="outline" flex={1} onClick={() => setLostOpen(true)}>✗ Mark Lost</Button>
+                        </HStack>
+                      </VStack>
                     )}
                     {selected.status === 'Accepted' && (
                       <Box p={3} bg="green.50" rounded="lg" border="1px solid" borderColor="green.200">
-                        <Text fontWeight={700} color="green.700">✅ Won — PO Generated</Text>
+                        <Text fontWeight={700} color="green.700">✅ Won — Sales Order Created</Text>
+                      </Box>
+                    )}
+                    {selected.status === 'Rejected' && (
+                      <Box p={3} bg="red.50" rounded="lg" border="1px solid" borderColor="red.200">
+                        <Text fontWeight={700} color="red.700">✗ Lost</Text>
+                        {selected.lostReason && <Text fontSize="xs" color="red.600" mt={1}>Reason: {selected.lostReason}</Text>}
                       </Box>
                     )}
                   </VStack>
@@ -238,10 +236,10 @@ export default function AdminQuotationsPage() {
         </DrawerContent>
       </DrawerRoot>
 
-      {/* WhatsApp Dialog */}
+      {/* WhatsApp Dialog — responsive */}
       <DialogRoot open={whatsappOpen} onOpenChange={d => setWhatsappOpen(d.open)}>
         <DialogBackdrop />
-        <DialogContent>
+        <DialogContent maxW={{ base: '95vw', md: '520px' }} mx="auto">
           <DialogHeader><Text fontWeight={700}>Share via WhatsApp</Text><DialogCloseTrigger /></DialogHeader>
           <DialogBody>
             {selected && (
@@ -249,7 +247,7 @@ export default function AdminQuotationsPage() {
                 <Text fontSize="sm" color="gray.600" mb={3}>Message preview:</Text>
                 <Box bg="green.50" rounded="lg" p={4} border="1px solid" borderColor="green.200">
                   <Text fontSize="sm" color="gray.700" whiteSpace="pre-line">
-                    {`Dear ${selected.customerName},\n\nYour quotation ${selected.quoteNumber} for project "${selected.projectName}" is ready.\n\nPlease review the quotation and confirm your requirement.\n\nRef: ${selected.rfqNumber}\nValid Until: ${selected.validUntil}\n\nThank you for choosing EleCom.`}
+                    {`Dear ${selected.customerName},\n\nYour quotation ${selected.quoteNumber} for project "${selected.projectName}" is ready.\n\nPlease review and confirm.\n\nRef: ${selected.rfqNumber}\nValid Until: ${selected.validUntil}\n\nThank you,\nEleCom Lighting`}
                   </Text>
                 </Box>
               </>
@@ -257,15 +255,15 @@ export default function AdminQuotationsPage() {
           </DialogBody>
           <DialogFooter gap={3}>
             <Button variant="ghost" onClick={() => setWhatsappOpen(false)}>Cancel</Button>
-            <Button colorPalette="green" onClick={shareWhatsapp}>💬 Share via WhatsApp</Button>
+            <Button colorPalette="green" onClick={shareWhatsapp}>💬 Send via WhatsApp</Button>
           </DialogFooter>
         </DialogContent>
       </DialogRoot>
 
-      {/* Lost Reason Dialog */}
+      {/* Lost Reason Dialog — responsive */}
       <DialogRoot open={lostOpen} onOpenChange={d => setLostOpen(d.open)}>
         <DialogBackdrop />
-        <DialogContent>
+        <DialogContent maxW={{ base: '95vw', md: '480px' }} mx="auto">
           <DialogHeader><Text fontWeight={700}>Mark as Lost</Text><DialogCloseTrigger /></DialogHeader>
           <DialogBody>
             <Field.Root mb={4}>
