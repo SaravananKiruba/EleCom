@@ -1,9 +1,9 @@
 'use client';
 
 import {
-  Box, Flex, HStack, Text, Button, IconButton, Badge, Link as ChakraLink,
+  Box, Flex, HStack, Text, Button, IconButton, Badge,
   DrawerRoot, DrawerBackdrop, DrawerContent, DrawerHeader, DrawerBody, DrawerCloseTrigger,
-  VStack, Separator, MenuRoot, MenuTrigger, MenuContent, MenuItem,
+  VStack, Separator,
 } from '@chakra-ui/react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -228,4 +228,4 @@ export function PublicHeader() {
       </DrawerRoot>
     </Box>
   );
-}
+}

@@ -1,8 +1,7 @@
 'use client';
 
 import {
-  Box, Flex, Text, VStack, HStack, IconButton, Button,
-  DrawerRoot, DrawerBackdrop, DrawerContent, DrawerBody, DrawerCloseTrigger,
+  Box, Flex, Text, VStack, HStack, IconButton,
   Separator, Badge,
 } from '@chakra-ui/react';
 import Link from 'next/link';
@@ -139,15 +138,30 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </Box>
       </Box>
 
-      {/* Mobile Drawer */}
-      <DrawerRoot open={drawerOpen} onOpenChange={d => setDrawerOpen(d.open)} placement="start">
-        <DrawerBackdrop />
-        <DrawerContent maxW="220px">
-          <DrawerBody p={0}>
-            <SidebarContent pathname={pathname} onClose={() => setDrawerOpen(false)} />
-          </DrawerBody>
-        </DrawerContent>
-      </DrawerRoot>
+      {/* Mobile Drawer — pure CSS slide from left */}
+      <div
+        onClick={() => setDrawerOpen(false)}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(15,20,30,0.45)',
+          backdropFilter: 'blur(3px)',
+          opacity: drawerOpen ? 1 : 0,
+          pointerEvents: drawerOpen ? 'auto' : 'none',
+          transition: 'opacity 0.22s ease',
+        }}
+      />
+      <div
+        style={{
+          position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 201,
+          width: 240, height: '100dvh',
+          background: '#fff',
+          boxShadow: '4px 0 32px rgba(0,0,0,0.12)',
+          transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.26s cubic-bezier(0.4,0,0.2,1)',
+        }}
+      >
+        <SidebarContent pathname={pathname} onClose={() => setDrawerOpen(false)} />
+      </div>
 
       <Toaster />
     </Box>

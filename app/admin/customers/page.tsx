@@ -1,10 +1,9 @@
 'use client';
 
 import {
-  Box, Text, Button, HStack, VStack, Flex, SimpleGrid, Input, Field,
+  Box, Text, Button, HStack, VStack, Flex, SimpleGrid,
   DialogRoot, DialogBackdrop, DialogContent, DialogHeader, DialogBody, DialogFooter, DialogCloseTrigger,
-  DrawerRoot, DrawerBackdrop, DrawerContent, DrawerHeader, DrawerBody, DrawerCloseTrigger,
-  Separator, Badge,
+  Separator,
 } from '@chakra-ui/react';
 import { useState, useMemo } from 'react';
 import { useAppState } from '@/context/AppContext';
@@ -12,6 +11,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SidePanel } from '@/components/ui/SidePanel';
 import { Customer } from '@/types';
 import { toaster } from '@/components/ui/toaster';
 
@@ -67,29 +67,30 @@ export default function CustomersPage() {
             <Box as="table" w="full" style={{ borderCollapse: 'collapse', minWidth: '700px' }}>
               <Box as="thead" bg="gray.50" borderBottom="1px solid" borderColor="gray.100">
                 <Box as="tr">
-                  {['Customer', 'Company', 'Mobile', 'City', 'RFQs', 'Quotes', 'Status', 'Actions'].map(h => (
+                  {['Customer', 'Company', 'Mobile', 'City', 'RFQs', 'Quotes', 'Status'].map(h => (
                     <Box key={h} as="th" px={4} py={3} textAlign="left" fontSize="xs" fontWeight={700} color="gray.500" textTransform="uppercase" letterSpacing="wide" whiteSpace="nowrap">{h}</Box>
                   ))}
                 </Box>
               </Box>
               <Box as="tbody">
                 {filtered.map(c => (
-                  <Box as="tr" key={c.id} borderTop="1px solid" borderColor="gray.50" _hover={{ bg: 'gray.50' }}>
-                    <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={600}>{c.name}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="sm" color="gray.600">{c.companyName}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" fontFamily="mono" color="gray.600">{c.mobile}</Text></Box>
+                  <Box
+                    as="tr" key={c.id}
+                    borderTop="1px solid" borderColor="gray.50"
+                    _hover={{ bg: 'blue.50', cursor: 'pointer' }}
+                    transition="background 0.1s"
+                    onClick={() => { setSelected(c); setDetailOpen(true); }}
+                  >
+                    <Box as="td" px={4} py={3}>
+                      <Text fontSize="sm" fontWeight={600}>{c.name}</Text>
+                      <Text fontSize="xs" color="gray.400">{c.email}</Text>
+                    </Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="sm" color="gray.700">{c.companyName}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="xs" fontFamily="mono" color="gray.500">{c.mobile}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" color="gray.600">{c.city}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={600}>{customerRFQs(c.id).length}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={600}>{customerQuotes(c.id).length}</Text></Box>
                     <Box as="td" px={4} py={3}><StatusBadge status={c.status} /></Box>
-                    <Box as="td" px={4} py={3}>
-                      <HStack gap={2}>
-                        <Button size="xs" variant="outline" colorPalette="blue" onClick={() => { setSelected(c); setDetailOpen(true); }}>View</Button>
-                        <Button size="xs" variant="outline" colorPalette={c.status === 'Active' ? 'red' : 'green'} onClick={() => toggleStatus(c)}>
-                          {c.status === 'Active' ? 'Deactivate' : 'Activate'}
-                        </Button>
-                      </HStack>
-                    </Box>
                   </Box>
                 ))}
               </Box>
@@ -98,52 +99,44 @@ export default function CustomersPage() {
         </Box>
       )}
 
-      {/* Detail Drawer */}
-      <DrawerRoot open={detailOpen} onOpenChange={d => setDetailOpen(d.open)} placement="end" size="md">
-        <DrawerBackdrop />
-        <DrawerContent maxW={{ base: '100vw', md: '480px' }}>
-          <DrawerHeader borderBottom="1px solid" borderColor="gray.100">
-            <Text fontWeight={700}>{selected?.name}</Text>
-            <DrawerCloseTrigger />
-          </DrawerHeader>
-          <DrawerBody py={4}>
-            {selected && (
-              <VStack gap={5} align="stretch">
-                <Box>
-                  <Text fontWeight={700} fontSize="sm" color="gray.600" mb={2} textTransform="uppercase" letterSpacing="wide">Profile</Text>
-                  <SimpleGrid columns={2} gap={3}>
-                    {[['Name', selected.name], ['Company', selected.companyName], ['Mobile', selected.mobile], ['Email', selected.email], ['City', selected.city], ['GST', selected.gst || '—'], ['Since', selected.createdAt]].map(([l, v]) => (
-                      <Box key={l}><Text fontSize="xs" color="gray.500">{l}</Text><Text fontSize="sm" fontWeight={600}>{v}</Text></Box>
-                    ))}
-                  </SimpleGrid>
-                </Box>
-                <Separator />
-                <Box>
-                  <Text fontWeight={700} fontSize="sm" color="gray.600" mb={2}>RFQs ({customerRFQs(selected.id).length})</Text>
-                  {customerRFQs(selected.id).map(r => (
-                    <Flex key={r.id} justify="space-between" py={2} borderBottom="1px solid" borderColor="gray.50">
-                      <Text fontSize="xs" fontFamily="mono" color="blue.700">{r.rfqNumber}</Text>
-                      <StatusBadge status={r.status} />
-                    </Flex>
-                  ))}
-                </Box>
-                <Box>
-                  <Text fontWeight={700} fontSize="sm" color="gray.600" mb={2}>Quotes ({customerQuotes(selected.id).length})</Text>
-                  {customerQuotes(selected.id).map(q => (
-                    <Flex key={q.id} justify="space-between" py={2} borderBottom="1px solid" borderColor="gray.50">
-                      <Text fontSize="xs" fontFamily="mono" color="green.700">{q.quoteNumber}</Text>
-                      <StatusBadge status={q.status} />
-                    </Flex>
-                  ))}
-                </Box>
-                <Button colorPalette={selected.status === 'Active' ? 'red' : 'green'} variant="outline" onClick={() => { toggleStatus(selected); setDetailOpen(false); }}>
-                  {selected.status === 'Active' ? 'Deactivate Customer' : 'Activate Customer'}
-                </Button>
-              </VStack>
-            )}
-          </DrawerBody>
-        </DrawerContent>
-      </DrawerRoot>
+      <SidePanel
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        title={selected && <Text fontWeight={700} fontSize="sm">{selected.name} · {selected.companyName}</Text>}
+      >
+        {selected && (
+          <VStack gap={5} align="stretch">
+            <SimpleGrid columns={2} gap={3}>
+              {[['Name', selected.name], ['Company', selected.companyName], ['Mobile', selected.mobile], ['Email', selected.email], ['City', selected.city], ['GST', selected.gst || '—'], ['Since', selected.createdAt]].map(([l, v]) => (
+                <Box key={l}><Text fontSize="10px" color="gray.400" mb={0.5}>{l}</Text><Text fontSize="sm" fontWeight={600} color="gray.800">{v}</Text></Box>
+              ))}
+            </SimpleGrid>
+            <Separator />
+            <Box>
+              <Text fontWeight={700} fontSize="xs" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="widest">RFQs ({customerRFQs(selected.id).length})</Text>
+              {customerRFQs(selected.id).length === 0 ? <Text fontSize="xs" color="gray.400">No RFQs</Text> : customerRFQs(selected.id).map(r => (
+                <Flex key={r.id} justify="space-between" py={2} borderBottom="1px solid" borderColor="gray.50">
+                  <Text fontSize="xs" fontFamily="mono" color="blue.700">{r.rfqNumber}</Text>
+                  <StatusBadge status={r.status} />
+                </Flex>
+              ))}
+            </Box>
+            <Box>
+              <Text fontWeight={700} fontSize="xs" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="widest">Quotes ({customerQuotes(selected.id).length})</Text>
+              {customerQuotes(selected.id).length === 0 ? <Text fontSize="xs" color="gray.400">No quotes</Text> : customerQuotes(selected.id).map(q => (
+                <Flex key={q.id} justify="space-between" py={2} borderBottom="1px solid" borderColor="gray.50">
+                  <Text fontSize="xs" fontFamily="mono" color="green.700">{q.quoteNumber}</Text>
+                  <StatusBadge status={q.status} />
+                </Flex>
+              ))}
+            </Box>
+            <Separator />
+            <Button colorPalette={selected.status === 'Active' ? 'red' : 'green'} variant="outline" rounded="xl" onClick={() => { toggleStatus(selected); setDetailOpen(false); }}>
+              {selected.status === 'Active' ? 'Deactivate Customer' : 'Activate Customer'}
+            </Button>
+          </VStack>
+        )}
+      </SidePanel>
 
       {/* Confirm Dialog */}
       <DialogRoot open={confirmOpen} onOpenChange={d => setConfirmOpen(d.open)}>

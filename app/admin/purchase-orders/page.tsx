@@ -2,13 +2,13 @@
 
 import {
   Box, Text, Button, HStack, VStack, Flex, Separator, SimpleGrid, Input, Field,
-  DrawerRoot, DrawerBackdrop, DrawerContent, DrawerHeader, DrawerBody, DrawerCloseTrigger,
 } from '@chakra-ui/react';
 import { useState } from 'react';
 import { useAppState } from '@/context/AppContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SidePanel } from '@/components/ui/SidePanel';
 import { products, brands } from '@/data/mockData';
 import { PurchaseOrder } from '@/types';
 import { toaster } from '@/components/ui/toaster';
@@ -59,25 +59,28 @@ export default function SalesOrdersPage() {
             <Box as="table" w="full" style={{ borderCollapse: 'collapse', minWidth: '700px' }}>
               <Box as="thead" bg="gray.50" borderBottom="1px solid" borderColor="gray.100">
                 <Box as="tr">
-                  {['SO Number', 'Quote Ref', 'Customer', 'Company', 'Date', 'Due Date', 'Amount', 'Status', 'Actions'].map(h => (
+                  {['SO Number', 'Quote Ref', 'Customer', 'Company', 'Date', 'Due Date', 'Amount', 'Status'].map(h => (
                     <Box key={h} as="th" px={4} py={3} textAlign="left" fontSize="xs" fontWeight={700} color="gray.500" textTransform="uppercase" letterSpacing="wide" whiteSpace="nowrap">{h}</Box>
                   ))}
                 </Box>
               </Box>
               <Box as="tbody">
                   {state.purchaseOrders.map(po => (
-                  <Box as="tr" key={po.id} borderTop="1px solid" borderColor="gray.50" _hover={{ bg: 'gray.50' }}>
+                  <Box
+                    as="tr" key={po.id}
+                    borderTop="1px solid" borderColor="gray.50"
+                    _hover={{ bg: 'blue.50', cursor: 'pointer' }}
+                    transition="background 0.1s"
+                    onClick={() => openSO(po)}
+                  >
                     <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700} color="blue.700" fontFamily="mono">{po.soNumber || po.poNumber}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="xs" fontFamily="mono" color="green.700">{po.quoteNumber}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={600}>{po.customerName}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" color="gray.600">{po.companyName}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" color="gray.600">{po.poDate}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" color={po.dueDate && po.dueDate < '2026-08-23' ? 'red.500' : 'gray.600'}>{po.dueDate || '—'}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="xs" color="gray.500">{po.companyName}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="xs" color="gray.500">{po.poDate}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="xs" color={po.dueDate && po.dueDate < '2026-08-23' ? 'red.500' : 'gray.500'}>{po.dueDate || '—'}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700}>₹{grandTotal(po).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Box>
                     <Box as="td" px={4} py={3}><StatusBadge status={po.status} /></Box>
-                    <Box as="td" px={4} py={3}>
-                      <Button size="xs" variant="outline" colorPalette="blue" onClick={() => openSO(po)}>View</Button>
-                    </Box>
                   </Box>
                 ))}
               </Box>
@@ -86,14 +89,18 @@ export default function SalesOrdersPage() {
         </Box>
       )}
 
-      <DrawerRoot open={drawerOpen} onOpenChange={d => setDrawerOpen(d.open)} placement="end" size="lg">
-        <DrawerBackdrop />
-        <DrawerContent maxW={{ base: '100vw', md: '540px' }}>
-          <DrawerHeader borderBottom="1px solid" borderColor="gray.100">
-            <Text fontWeight={800} fontFamily="mono" color="blue.700">{selected?.soNumber || selected?.poNumber}</Text>
-            <DrawerCloseTrigger />
-          </DrawerHeader>
-          <DrawerBody py={4} overflowY="auto">
+      <SidePanel
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={
+          selected && (
+            <HStack gap={2}>
+              <Text fontWeight={800} fontFamily="mono" fontSize="sm" color="blue.700">{selected.soNumber || selected.poNumber}</Text>
+              <StatusBadge status={selected.status} />
+            </HStack>
+          )
+        }
+      >
             {selected && (
               <VStack gap={5} align="stretch">
                 <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
@@ -170,9 +177,7 @@ export default function SalesOrdersPage() {
                 </VStack>
               </VStack>
             )}
-          </DrawerBody>
-        </DrawerContent>
-      </DrawerRoot>
+      </SidePanel>
     </Box>
   );
 }

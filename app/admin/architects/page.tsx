@@ -1,15 +1,15 @@
 'use client';
 
 import {
-  Box, Text, Button, HStack, VStack, Flex, Separator, SimpleGrid, Input, Textarea, Field,
+  Box, Text, Button, HStack, VStack, Flex, Separator, SimpleGrid, Input, Field,
   DialogRoot, DialogBackdrop, DialogContent, DialogHeader, DialogBody, DialogFooter, DialogCloseTrigger,
-  DrawerRoot, DrawerBackdrop, DrawerContent, DrawerHeader, DrawerBody, DrawerCloseTrigger,
 } from '@chakra-ui/react';
 import { useState } from 'react';
 import { useAppState } from '@/context/AppContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SidePanel } from '@/components/ui/SidePanel';
 import { Architect, ArchitectStatus, DiscountHistory } from '@/types';
 import { toaster } from '@/components/ui/toaster';
 
@@ -63,30 +63,33 @@ export default function ArchitectsPage() {
             <Box as="table" w="full" style={{ borderCollapse: 'collapse', minWidth: '700px' }}>
               <Box as="thead" bg="gray.50" borderBottom="1px solid" borderColor="gray.100">
                 <Box as="tr">
-                  {['Architect', 'Firm', 'City', 'Applied', 'Discount', 'Status', 'Actions'].map(h => (
+                  {['Architect', 'Firm', 'City', 'Applied', 'Discount', 'Status'].map(h => (
                     <Box key={h} as="th" px={4} py={3} textAlign="left" fontSize="xs" fontWeight={700} color="gray.500" textTransform="uppercase" letterSpacing="wide" whiteSpace="nowrap">{h}</Box>
                   ))}
                 </Box>
               </Box>
               <Box as="tbody">
                 {state.architects.map(a => (
-                  <Box as="tr" key={a.id} borderTop="1px solid" borderColor="gray.50" _hover={{ bg: 'gray.50' }}>
+                  <Box
+                    as="tr" key={a.id}
+                    borderTop="1px solid" borderColor="gray.50"
+                    _hover={{ bg: 'blue.50', cursor: 'pointer' }}
+                    transition="background 0.1s"
+                    onClick={() => { setSelected(a); setDrawerOpen(true); }}
+                  >
                     <Box as="td" px={4} py={3}>
                       <Text fontSize="sm" fontWeight={600}>{a.name}</Text>
-                      <Text fontSize="xs" color="gray.500">{a.email}</Text>
+                      <Text fontSize="xs" color="gray.400">{a.email}</Text>
                     </Box>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" color="gray.700">{a.firmName}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" color="gray.600">{a.city}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" color="gray.500">{a.createdAt}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="xs" color="gray.400">{a.createdAt}</Text></Box>
                     <Box as="td" px={4} py={3}>
                       {a.discount ? (
                         <Text fontSize="sm" fontWeight={700} color="green.600">{a.discount}%</Text>
-                      ) : <Text fontSize="xs" color="gray.400">—</Text>}
+                      ) : <Text fontSize="xs" color="gray.300">—</Text>}
                     </Box>
                     <Box as="td" px={4} py={3}><StatusBadge status={a.status} /></Box>
-                    <Box as="td" px={4} py={3}>
-                      <Button size="xs" variant="outline" colorPalette="blue" onClick={() => { setSelected(a); setDrawerOpen(true); }}>View</Button>
-                    </Box>
                   </Box>
                 ))}
               </Box>
@@ -95,84 +98,73 @@ export default function ArchitectsPage() {
         </Box>
       )}
 
-      {/* Detail Drawer */}
-      <DrawerRoot open={drawerOpen} onOpenChange={d => setDrawerOpen(d.open)} placement="end" size="md">
-        <DrawerBackdrop />
-        <DrawerContent maxW={{ base: '100vw', md: '480px' }}>
-          <DrawerHeader borderBottom="1px solid" borderColor="gray.100">
-            <Text fontWeight={700}>{selected?.name}</Text>
-            <DrawerCloseTrigger />
-          </DrawerHeader>
-          <DrawerBody py={4} overflowY="auto">
-            {selected && (
-              <VStack gap={5} align="stretch">
-                <Box>
-                  <Text fontWeight={700} fontSize="sm" color="gray.600" mb={2} textTransform="uppercase" letterSpacing="wide">Profile</Text>
-                  <SimpleGrid columns={2} gap={3}>
-                    {[
-                      ['Firm', selected.firmName], ['Mobile', selected.mobile], ['Email', selected.email],
-                      ['City', selected.city], ['License #', selected.licenseNumber], ['GST', selected.gst || '—'],
-                      ['Specialization', selected.specialization || '—'], ['Applied', selected.createdAt],
-                    ].map(([l, v]) => (
-                      <Box key={l}><Text fontSize="xs" color="gray.500">{l}</Text><Text fontSize="sm" fontWeight={600}>{v}</Text></Box>
-                    ))}
-                  </SimpleGrid>
+      <SidePanel
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={selected && <Text fontWeight={700} fontSize="sm">{selected.name} · {selected.firmName}</Text>}
+      >
+        {selected && (
+          <VStack gap={5} align="stretch">
+            <SimpleGrid columns={2} gap={3}>
+              {[
+                ['Firm', selected.firmName], ['Mobile', selected.mobile], ['Email', selected.email],
+                ['City', selected.city], ['License #', selected.licenseNumber], ['GST', selected.gst || '—'],
+                ['Specialization', selected.specialization || '—'], ['Applied', selected.createdAt],
+              ].map(([l, v]) => (
+                <Box key={l}><Text fontSize="10px" color="gray.400" mb={0.5}>{l}</Text><Text fontSize="sm" fontWeight={600} color="gray.800">{v}</Text></Box>
+              ))}
+            </SimpleGrid>
+            <Separator />
+            <Box>
+              <Flex justify="space-between" align="center" mb={2}>
+                <Text fontWeight={700} fontSize="xs" color="gray.400" textTransform="uppercase" letterSpacing="widest">Discount</Text>
+                <Button size="xs" colorPalette="blue" onClick={() => { setNewDiscount(String(selected.discount || '')); setDiscountExpiry(selected.discountExpiry || ''); setDiscountOpen(true); }}>
+                  {selected.discount ? 'Edit' : 'Assign'}
+                </Button>
+              </Flex>
+              {selected.discount ? (
+                <Box bg="green.50" rounded="xl" p={3} border="1px solid" borderColor="green.100">
+                  <Text fontWeight={800} color="green.700" fontSize="2xl">{selected.discount}%</Text>
+                  <Text fontSize="xs" color="green.600" mt={1}>Effective: {selected.discountEffective || '—'} · Expires: {selected.discountExpiry || '—'}</Text>
                 </Box>
-                <Separator />
-                {/* Discount */}
-                <Box>
-                  <Flex justify="space-between" align="center" mb={2}>
-                    <Text fontWeight={700} fontSize="sm" color="gray.600" textTransform="uppercase" letterSpacing="wide">Discount</Text>
-                    <Button size="xs" colorPalette="blue" onClick={() => { setNewDiscount(String(selected.discount || '')); setDiscountExpiry(selected.discountExpiry || ''); setDiscountOpen(true); }}>
-                      {selected.discount ? 'Edit' : 'Assign'}
-                    </Button>
-                  </Flex>
-                  {selected.discount ? (
-                    <Box bg="green.50" rounded="lg" p={3} border="1px solid" borderColor="green.100">
-                      <Text fontWeight={700} color="green.700" fontSize="xl">{selected.discount}%</Text>
-                      <Text fontSize="xs" color="green.600">Effective: {selected.discountEffective || '—'} · Expires: {selected.discountExpiry || '—'}</Text>
+              ) : (
+                <Text fontSize="sm" color="gray.400">No discount assigned yet</Text>
+              )}
+              {(selected.discountHistory?.length ?? 0) > 0 && (
+                <Box mt={3}>
+                  <Text fontSize="10px" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="widest">History</Text>
+                  {selected.discountHistory.map((h, i) => (
+                    <Box key={i} bg="gray.50" rounded="lg" p={2.5} mb={1.5}>
+                      <Text fontSize="xs" color="gray.600">{h.previous}% → {h.next}% · {h.changedBy} · {h.date}</Text>
                     </Box>
-                  ) : (
-                    <Text fontSize="sm" color="gray.400">No discount assigned</Text>
-                  )}
-                  {selected.discountHistory?.length > 0 && (
-                    <Box mt={3}>
-                      <Text fontSize="xs" fontWeight={600} color="gray.600" mb={2}>Discount History</Text>
-                      {selected.discountHistory.map((h, i) => (
-                        <Box key={i} bg="gray.50" rounded="lg" p={2.5} mb={2}>
-                          <Text fontSize="xs" color="gray.600">{h.previous}% → {h.next}% · by {h.changedBy} · {h.date}</Text>
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
+                  ))}
                 </Box>
-                <Separator />
-                {/* Status actions */}
-                <Box>
-                  <Text fontWeight={700} fontSize="sm" color="gray.600" mb={2} textTransform="uppercase" letterSpacing="wide">Actions</Text>
-                  <VStack gap={2} align="stretch">
-                    {selected.status === 'Pending' && (
-                      <HStack gap={2}>
-                        <Button colorPalette="green" flex={1} onClick={() => updateStatus(selected, 'Active')}>✓ Approve</Button>
-                        <Button colorPalette="red" variant="outline" flex={1} onClick={() => updateStatus(selected, 'Rejected')}>✗ Reject</Button>
-                      </HStack>
-                    )}
-                    {selected.status === 'Active' && (
-                      <Button colorPalette="orange" variant="outline" onClick={() => updateStatus(selected, 'Suspended')}>Suspend</Button>
-                    )}
-                    {(selected.status === 'Suspended' || selected.status === 'Rejected') && (
-                      <Button colorPalette="green" variant="outline" onClick={() => updateStatus(selected, 'Active')}>Reactivate</Button>
-                    )}
-                    {selected.status === 'Approved' && (
-                      <Button colorPalette="blue" onClick={() => updateStatus(selected, 'Active')}>Mark Active</Button>
-                    )}
-                  </VStack>
-                </Box>
+              )}
+            </Box>
+            <Separator />
+            <Box>
+              <Text fontWeight={700} fontSize="xs" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="widest">Actions</Text>
+              <VStack gap={2} align="stretch">
+                {selected.status === 'Pending' && (
+                  <HStack gap={2}>
+                    <Button colorPalette="green" flex={1} rounded="xl" onClick={() => updateStatus(selected, 'Active')}>✓ Approve</Button>
+                    <Button colorPalette="red" variant="outline" flex={1} rounded="xl" onClick={() => updateStatus(selected, 'Rejected')}>✗ Reject</Button>
+                  </HStack>
+                )}
+                {selected.status === 'Active' && (
+                  <Button colorPalette="orange" variant="outline" rounded="xl" onClick={() => updateStatus(selected, 'Suspended')}>Suspend</Button>
+                )}
+                {(selected.status === 'Suspended' || selected.status === 'Rejected') && (
+                  <Button colorPalette="green" variant="outline" rounded="xl" onClick={() => updateStatus(selected, 'Active')}>Reactivate</Button>
+                )}
+                {selected.status === 'Approved' && (
+                  <Button colorPalette="blue" rounded="xl" onClick={() => updateStatus(selected, 'Active')}>Mark Active</Button>
+                )}
               </VStack>
-            )}
-          </DrawerBody>
-        </DrawerContent>
-      </DrawerRoot>
+            </Box>
+          </VStack>
+        )}
+      </SidePanel>
 
       {/* Discount Dialog */}
       <DialogRoot open={discountOpen} onOpenChange={d => setDiscountOpen(d.open)}>

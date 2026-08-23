@@ -3,7 +3,6 @@
 import {
   Box, Text, Button, HStack, VStack, Flex, Separator, SimpleGrid, Textarea, Field,
   DialogRoot, DialogBackdrop, DialogContent, DialogHeader, DialogBody, DialogFooter, DialogCloseTrigger,
-  DrawerRoot, DrawerBackdrop, DrawerContent, DrawerHeader, DrawerBody, DrawerCloseTrigger,
 } from '@chakra-ui/react';
 import { useState, useMemo } from 'react';
 import { useAppState } from '@/context/AppContext';
@@ -12,6 +11,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SidePanel } from '@/components/ui/SidePanel';
 import { products, brands } from '@/data/mockData';
 import { Quote, QuoteStatus, PurchaseOrder } from '@/types';
 import { toaster } from '@/components/ui/toaster';
@@ -119,28 +119,31 @@ export default function AdminQuotationsPage() {
             <Box as="table" w="full" style={{ borderCollapse: 'collapse', minWidth: '800px' }}>
               <Box as="thead" bg="gray.50" borderBottom="1px solid" borderColor="gray.100">
                 <Box as="tr">
-                  {['Quote #', 'RFQ #', 'Customer', 'Project', 'Amount', 'Valid Until', 'Assigned', 'Status', 'Actions'].map(h => (
+                  {['Quote #', 'RFQ #', 'Customer', 'Project', 'Amount', 'Valid Until', 'Assigned', 'Status'].map(h => (
                     <Box key={h} as="th" px={4} py={3} textAlign="left" fontSize="xs" fontWeight={700} color="gray.500" textTransform="uppercase" letterSpacing="wide" whiteSpace="nowrap">{h}</Box>
                   ))}
                 </Box>
               </Box>
               <Box as="tbody">
                 {paginated.map(qt => (
-                  <Box as="tr" key={qt.id} borderTop="1px solid" borderColor="gray.50" _hover={{ bg: 'gray.50' }}>
+                  <Box
+                    as="tr" key={qt.id}
+                    borderTop="1px solid" borderColor="gray.50"
+                    _hover={{ bg: 'blue.50', cursor: 'pointer' }}
+                    transition="background 0.1s"
+                    onClick={() => { setSelected(qt); setDetailOpen(true); }}
+                  >
                     <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700} color="green.700" fontFamily="mono">{qt.quoteNumber}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" fontFamily="mono" color="gray.500">{qt.rfqNumber}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="xs" fontFamily="mono" color="gray.400">{qt.rfqNumber}</Text></Box>
                     <Box as="td" px={4} py={3}>
                       <Text fontSize="sm" fontWeight={600}>{qt.customerName}</Text>
-                      <Text fontSize="xs" color="gray.500">{qt.companyName}</Text>
+                      <Text fontSize="xs" color="gray.400">{qt.companyName}</Text>
                     </Box>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" color="gray.700">{qt.projectName}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700}>&#8377;{grandTotal(qt).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" color={new Date(qt.validUntil) < new Date() ? 'red.500' : 'gray.600'}>{qt.validUntil}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700}>₹{grandTotal(qt).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="xs" color={new Date(qt.validUntil) < new Date() ? 'red.500' : 'gray.500'}>{qt.validUntil}</Text></Box>
                     <Box as="td" px={4} py={3}><Text fontSize="xs" color="gray.600">{qt.assignedTo || '—'}</Text></Box>
                     <Box as="td" px={4} py={3}><StatusBadge status={qt.status} /></Box>
-                    <Box as="td" px={4} py={3}>
-                      <Button size="xs" variant="outline" colorPalette="blue" rounded="md" onClick={() => { setSelected(qt); setDetailOpen(true); }}>View</Button>
-                    </Box>
                   </Box>
                 ))}
               </Box>
@@ -150,91 +153,89 @@ export default function AdminQuotationsPage() {
       )}
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
-      {/* Detail Drawer — full screen on mobile */}
-      <DrawerRoot open={detailOpen} onOpenChange={d => setDetailOpen(d.open)} placement="end" size="lg">
-        <DrawerBackdrop />
-        <DrawerContent maxW={{ base: '100vw', md: '540px' }}>
-          <DrawerHeader borderBottom="1px solid" borderColor="gray.100" flexShrink={0}>
+      <SidePanel
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        title={
+          selected && (
             <HStack gap={2} flexWrap="wrap">
-              <Text fontWeight={800} fontFamily="mono" color="green.700">{selected?.quoteNumber}</Text>
-              {selected && <StatusBadge status={selected.status} />}
+              <Text fontWeight={800} fontFamily="mono" fontSize="sm" color="green.700">{selected.quoteNumber}</Text>
+              <StatusBadge status={selected.status} />
             </HStack>
-            <DrawerCloseTrigger />
-          </DrawerHeader>
-          <DrawerBody py={4} overflowY="auto">
-            {selected && (
-              <VStack gap={5} align="stretch">
-                <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
-                  {[['Customer', selected.customerName], ['Company', selected.companyName], ['Project', selected.projectName], ['RFQ Ref', selected.rfqNumber], ['Valid Until', selected.validUntil], ['Assigned', selected.assignedTo || '—']].map(([l, v]) => (
-                    <Box key={l}><Text fontSize="xs" color="gray.500">{l}</Text><Text fontSize="sm" fontWeight={600}>{v}</Text></Box>
-                  ))}
-                </SimpleGrid>
-                <Separator />
-                <Box>
-                  <Text fontWeight={700} fontSize="sm" color="gray.600" mb={2} textTransform="uppercase" letterSpacing="wide">Products</Text>
-                  <VStack gap={2} align="stretch">
-                    {selected.lineItems.map(li => {
-                      const p = products.find(x => x.id === li.productId);
-                      const b = brands.find(x => x.id === p?.brandId);
-                      return (
-                        <Flex key={li.productId} justify="space-between" align="center" bg="gray.50" rounded="lg" px={3} py={2.5} gap={2} flexWrap="wrap">
-                          <Box minW={0}>
-                            <Text fontSize="sm" fontWeight={600}>{p?.name}</Text>
-                            <Text fontSize="xs" color="gray.500">{b?.name} • Qty: {li.quantity}</Text>
-                          </Box>
-                          <Box textAlign="right" flexShrink={0}>
-                            <Text fontSize="xs" color="gray.500">&#8377;{li.basePrice} -{li.discount}% +{li.tax}%</Text>
-                            <Text fontSize="sm" fontWeight={700}>&#8377;{lineTotal(li).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
-                          </Box>
-                        </Flex>
-                      );
-                    })}
-                  </VStack>
-                  <Flex justify="flex-end" mt={3}>
-                    <VStack align="stretch" minW="200px" gap={1} bg="blue.50" p={3} rounded="lg">
-                      <Flex justify="space-between"><Text fontSize="xs" color="gray.600">Delivery</Text><Text fontSize="xs" fontWeight={600}>&#8377;{selected.deliveryCharges.toLocaleString()}</Text></Flex>
-                      <Flex justify="space-between"><Text fontSize="sm" fontWeight={700}>Total</Text><Text fontSize="sm" fontWeight={800} color="blue.700">&#8377;{grandTotal(selected).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Flex>
-                    </VStack>
-                  </Flex>
-                </Box>
-                <Separator />
-                <Box>
-                  <Text fontWeight={700} fontSize="sm" color="gray.600" mb={3} textTransform="uppercase" letterSpacing="wide">Actions</Text>
-                  <VStack gap={2} align="stretch">
-                    {selected.status === 'Draft' && (
-                      <Button colorPalette="blue" onClick={() => setWhatsappOpen(true)}>💬 Share Quote via WhatsApp</Button>
-                    )}
-                    {['Shared', 'Follow-Up', 'Negotiation'].includes(selected.status) && (
-                      <VStack gap={2} align="stretch">
-                        <Button colorPalette="blue" variant="ghost" size="sm" onClick={() => setWhatsappOpen(true)}>💬 Resend via WhatsApp</Button>
-                        <HStack gap={2}>
-                          <Button colorPalette="green" flex={1} onClick={markWon}>🏆 Won — Create Sales Order</Button>
-                          <Button colorPalette="red" variant="outline" flex={1} onClick={() => setLostOpen(true)}>✗ Mark Lost</Button>
-                        </HStack>
-                      </VStack>
-                    )}
-                    {selected.status === 'Accepted' && (
-                      <Box p={3} bg="green.50" rounded="lg" border="1px solid" borderColor="green.200">
-                        <Text fontWeight={700} color="green.700">✅ Won — Sales Order Created</Text>
+          )
+        }
+      >
+        {selected && (
+          <VStack gap={5} align="stretch">
+            <SimpleGrid columns={2} gap={3}>
+              {[['Customer', selected.customerName], ['Company', selected.companyName], ['Project', selected.projectName], ['RFQ Ref', selected.rfqNumber], ['Valid Until', selected.validUntil], ['Assigned', selected.assignedTo || '—']].map(([l, v]) => (
+                <Box key={l}><Text fontSize="10px" color="gray.400" mb={0.5}>{l}</Text><Text fontSize="sm" fontWeight={600} color="gray.800">{v}</Text></Box>
+              ))}
+            </SimpleGrid>
+            <Separator />
+            <Box>
+              <Text fontWeight={700} fontSize="xs" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="widest">Products</Text>
+              <VStack gap={2} align="stretch">
+                {selected.lineItems.map(li => {
+                  const p = products.find(x => x.id === li.productId);
+                  const b = brands.find(x => x.id === p?.brandId);
+                  return (
+                    <Flex key={li.productId} justify="space-between" align="center" bg="gray.50" rounded="lg" px={3} py={2.5} gap={2}>
+                      <Box minW={0}>
+                        <Text fontSize="sm" fontWeight={600} color="gray.800">{p?.name}</Text>
+                        <Text fontSize="xs" color="gray.400">{b?.name} · Qty {li.quantity}</Text>
                       </Box>
-                    )}
-                    {selected.status === 'Rejected' && (
-                      <Box p={3} bg="red.50" rounded="lg" border="1px solid" borderColor="red.200">
-                        <Text fontWeight={700} color="red.700">✗ Lost</Text>
-                        {selected.lostReason && <Text fontSize="xs" color="red.600" mt={1}>Reason: {selected.lostReason}</Text>}
+                      <Box textAlign="right" flexShrink={0}>
+                        <Text fontSize="xs" color="gray.400">₹{li.basePrice} -{li.discount}% +{li.tax}%</Text>
+                        <Text fontSize="sm" fontWeight={700} color="gray.800">₹{lineTotal(li).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
                       </Box>
-                    )}
-                  </VStack>
-                </Box>
-                <Box bg="gray.50" rounded="lg" p={3}>
-                  <Text fontSize="xs" fontWeight={600} color="gray.600" mb={1}>Terms</Text>
-                  <Text fontSize="xs" color="gray.500">{selected.terms}</Text>
-                </Box>
+                    </Flex>
+                  );
+                })}
               </VStack>
-            )}
-          </DrawerBody>
-        </DrawerContent>
-      </DrawerRoot>
+              <Flex justify="flex-end" mt={3}>
+                <VStack align="stretch" minW="200px" gap={1} bg="blue.50" p={3} rounded="xl">
+                  <Flex justify="space-between"><Text fontSize="xs" color="gray.500">Delivery</Text><Text fontSize="xs" fontWeight={600}>₹{selected.deliveryCharges.toLocaleString()}</Text></Flex>
+                  <Flex justify="space-between"><Text fontWeight={700} fontSize="sm">Total</Text><Text fontWeight={800} fontSize="sm" color="blue.700">₹{grandTotal(selected).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Flex>
+                </VStack>
+              </Flex>
+            </Box>
+            <Separator />
+            <Box>
+              <Text fontWeight={700} fontSize="xs" color="gray.400" mb={3} textTransform="uppercase" letterSpacing="widest">Actions</Text>
+              <VStack gap={2} align="stretch">
+                {selected.status === 'Draft' && (
+                  <Button colorPalette="blue" rounded="xl" onClick={() => setWhatsappOpen(true)}>💬 Share Quote via WhatsApp</Button>
+                )}
+                {['Shared', 'Follow-Up', 'Negotiation'].includes(selected.status) && (
+                  <VStack gap={2} align="stretch">
+                    <Button colorPalette="blue" variant="ghost" size="sm" onClick={() => setWhatsappOpen(true)}>💬 Resend via WhatsApp</Button>
+                    <HStack gap={2}>
+                      <Button colorPalette="green" flex={1} rounded="xl" onClick={markWon}>🏆 Won — Create SO</Button>
+                      <Button colorPalette="red" variant="outline" flex={1} rounded="xl" onClick={() => setLostOpen(true)}>✗ Mark Lost</Button>
+                    </HStack>
+                  </VStack>
+                )}
+                {selected.status === 'Accepted' && (
+                  <Box p={3} bg="green.50" rounded="xl" border="1px solid" borderColor="green.200">
+                    <Text fontWeight={700} color="green.700">✅ Won — Sales Order Created</Text>
+                  </Box>
+                )}
+                {selected.status === 'Rejected' && (
+                  <Box p={3} bg="red.50" rounded="xl" border="1px solid" borderColor="red.200">
+                    <Text fontWeight={700} color="red.700">✗ Lost</Text>
+                    {selected.lostReason && <Text fontSize="xs" color="red.600" mt={1}>Reason: {selected.lostReason}</Text>}
+                  </Box>
+                )}
+              </VStack>
+            </Box>
+            <Box bg="gray.50" rounded="xl" p={3}>
+              <Text fontSize="10px" color="gray.400" fontWeight={600} mb={1}>TERMS</Text>
+              <Text fontSize="xs" color="gray.600">{selected.terms}</Text>
+            </Box>
+          </VStack>
+        )}
+      </SidePanel>
 
       {/* WhatsApp Dialog — responsive */}
       <DialogRoot open={whatsappOpen} onOpenChange={d => setWhatsappOpen(d.open)}>

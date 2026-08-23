@@ -18,6 +18,7 @@ const colorMap: Record<string, string> = {
   Shared: 'blue',
   Negotiation: 'purple',
   'Converted to PO': 'teal',
+  'Converted to SO': 'teal',
   Scheduled: 'blue',
   Completed: 'green',
   Overdue: 'red',
