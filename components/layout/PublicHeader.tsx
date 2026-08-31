@@ -19,9 +19,11 @@ const NAV_LINKS = [
 ];
 
 const ROLE_COLORS: Record<string, string> = {
-  customer: 'blue',
-  architect: 'green',
-  admin: 'purple',
+  CUSTOMER: 'blue',
+  ARCHITECT: 'green',
+  TENANT_ADMIN: 'purple',
+  SALES: 'purple',
+  SAAS_ADMIN: 'orange',
   guest: 'gray',
 };
 
@@ -67,7 +69,7 @@ export function PublicHeader() {
           {/* Right actions */}
           <HStack gap={2}>
             {/* Quote cart */}
-            {user.role !== 'admin' && (
+            {user.role !== 'TENANT_ADMIN' && user.role !== 'SALES' && user.role !== 'SAAS_ADMIN' && (
               <Box position="relative">
                 <Link href="/quote-cart" style={{ textDecoration: 'none' }}>
                   <Button variant="ghost" size="sm" rounded="full" px={3}>
@@ -104,22 +106,14 @@ export function PublicHeader() {
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/admin" style={{ textDecoration: 'none' }}>
-                  <Button size="sm" colorPalette="blue" display={{ base: 'none', md: 'flex' }}>
-                    Admin
-                  </Button>
-                </Link>
               </>
             ) : (
               <HStack gap={2} display={{ base: 'none', md: 'flex' }}>
                 <Box bg={`${ROLE_COLORS[user.role]}.50`} border="1px solid" borderColor={`${ROLE_COLORS[user.role]}.200`} rounded="lg" px={3} py={1.5}>
                   <HStack gap={1.5}>
                     <Text fontSize="xs" fontWeight={700} color={`${ROLE_COLORS[user.role]}.700`} textTransform="capitalize">
-                      {user.role === 'architect' ? `🏛️ ${user.name}` : user.role === 'admin' ? `⚡ Admin` : `👤 ${user.name}`}
+                      {user.role === 'ARCHITECT' ? `🏛️ ${user.name}` : user.role === 'TENANT_ADMIN' || user.role === 'SALES' ? `⚡ ${user.name}` : user.role === 'SAAS_ADMIN' ? `🌐 ${user.name}` : `👤 ${user.name}`}
                     </Text>
-                    {user.discount && (
-                      <Badge colorPalette="green" size="xs" rounded="full">{user.discount}% off</Badge>
-                    )}
                   </HStack>
                 </Box>
                 {isAdmin && (
@@ -166,10 +160,9 @@ export function PublicHeader() {
               {/* Role info */}
               {user.role !== 'guest' && (
                 <Box bg="blue.50" rounded="lg" px={3} py={2.5} mb={2}>
-                  <Text fontSize="xs" fontWeight={700} color="blue.700" textTransform="capitalize">
-                    Signed in as {user.role}: {user.name}
+                  <Text fontSize="xs" fontWeight={700} color="blue.700">
+                    {user.name} &middot; {user.role.replace('_', ' ')}
                   </Text>
-                  {user.discount && <Text fontSize="xs" color="green.600" mt={0.5}>{user.discount}% architect discount applied</Text>}
                 </Box>
               )}
               {NAV_LINKS.map(l => (
@@ -185,11 +178,6 @@ export function PublicHeader() {
                   <Link href="/login" style={{ textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
                     <Box py={2} px={3} rounded="lg" bg="blue.50">
                       <Text fontWeight={600} color="blue.700">Sign In</Text>
-                    </Box>
-                  </Link>
-                  <Link href="/admin" style={{ textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
-                    <Box py={2} px={3} rounded="lg" _hover={{ bg: 'gray.50' }}>
-                      <Text fontWeight={500} color="gray.700">Admin Portal</Text>
                     </Box>
                   </Link>
                 </>

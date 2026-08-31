@@ -2,17 +2,19 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type UserRole = 'guest' | 'customer' | 'architect' | 'admin' | 'saasadmin';
+// Mirrors Prisma UserRole enum
+export type UserRole = 'SAAS_ADMIN' | 'TENANT_ADMIN' | 'SALES' | 'CUSTOMER' | 'ARCHITECT' | 'guest';
 
 export interface AuthUser {
+  id?: string;
   role: UserRole;
   name: string;
   email?: string;
   tenantId?: string;
   tenantName?: string;
+  tenantSlug?: string;
   customerId?: string;
   architectId?: string;
-  discount?: number;
 }
 
 interface AuthContextType {
@@ -55,10 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       login,
       logout,
-      isAdmin: user.role === 'admin',
-      isArchitect: user.role === 'architect',
-      isCustomer: user.role === 'customer',
-      isSaasAdmin: user.role === 'saasadmin',
+      isAdmin: user.role === 'TENANT_ADMIN' || user.role === 'SALES',
+      isArchitect: user.role === 'ARCHITECT',
+      isCustomer: user.role === 'CUSTOMER',
+      isSaasAdmin: user.role === 'SAAS_ADMIN',
     }}>
       {children}
     </AuthContext.Provider>

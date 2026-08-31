@@ -61,7 +61,7 @@ export default function SignupPage() {
 
     dispatch({ type: 'ADD_CUSTOMER', payload: newCustomer });
     login({
-      role: 'customer',
+      role: 'CUSTOMER',
       name: form.contactPerson.trim(),
       email: form.email.trim(),
       tenantId: DEFAULT_TENANT_ID,

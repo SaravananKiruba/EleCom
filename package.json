@@ -11,16 +11,24 @@
   "dependencies": {
     "@chakra-ui/react": "^3.23.0",
     "@emotion/react": "^11.14.0",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^3.0.3",
     "next": "^16.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^16.3.2",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

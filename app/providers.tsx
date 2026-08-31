@@ -3,7 +3,6 @@
 import { ChakraProvider, createSystem, defaultConfig, defineConfig } from '@chakra-ui/react';
 import { AppProvider } from '@/context/AppContext';
 import { AuthProvider } from '@/context/AuthContext';
-import { DemoSwitcher } from '@/components/ui/DemoSwitcher';
 import { ReactNode } from 'react';
 
 const config = defineConfig({
@@ -41,7 +40,6 @@ export function Providers({ children }: { children: ReactNode }) {
       <AuthProvider>
         <AppProvider>
           {children}
-          <DemoSwitcher />
         </AppProvider>
       </AuthProvider>
     </ChakraProvider>

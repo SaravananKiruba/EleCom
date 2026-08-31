@@ -18,7 +18,7 @@ export default function SaasAdminLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     // Frontend route guard — real auth must be enforced server-side
-    if (user.role !== 'saasadmin') {
+    if (user.role !== 'SAAS_ADMIN') {
       router.replace('/login');
     }
   }, [user.role, router]);

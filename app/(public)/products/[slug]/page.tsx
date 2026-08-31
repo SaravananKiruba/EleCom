@@ -99,12 +99,12 @@ export default function ProductDetailPage() {
           <Text fontSize="sm" color="gray.600" lineHeight="relaxed" mb={4}>{product.description}</Text>
           
           <Box bg="blue.50" rounded="xl" p={4} mb={5} border="1px solid" borderColor="blue.100">
-            {user.role === 'architect' && user.discount ? (
+            {user.role === 'ARCHITECT' ? (
               <>
-                <Text fontSize="sm" fontWeight={600} color="blue.700">🏷️ Architect Price (your {user.discount}% discount applied)</Text>
-                <Text fontSize="xs" color="blue.600" mt={1}>Exact pricing shared in your quotation. Discount auto-applied on quote.</Text>
+                <Text fontSize="sm" fontWeight={600} color="blue.700">🏷️ Architect pricing — discount auto-applied on your quote</Text>
+                <Text fontSize="xs" color="blue.600" mt={1}>Exact pricing shared in your quotation.</Text>
               </>
-            ) : user.role === 'customer' ? (
+            ) : user.role === 'CUSTOMER' ? (
               <>
                 <Text fontSize="sm" fontWeight={600} color="blue.700">💰 Price available on quote</Text>
                 <Text fontSize="xs" color="blue.600" mt={1}>Add to cart and submit an RFQ to receive a competitive quote in 10 minutes.</Text>

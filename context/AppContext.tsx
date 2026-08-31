@@ -1,16 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { QuoteCartItem, RFQ, Quote, FollowUp, PurchaseOrder, Architect, Customer, Tenant } from '@/types';
-import {
-  rfqs as initialRFQs,
-  quotes as initialQuotes,
-  followUps as initialFollowUps,
-  purchaseOrders as initialPOs,
-  architects as initialArchitects,
-  customers as initialCustomers,
-  tenants as initialTenants,
-} from '@/data/mockData';
 
 interface AppState {
   cartItems: QuoteCartItem[];
@@ -43,8 +34,6 @@ type Action =
   | { type: 'ADD_TENANT'; payload: Tenant }
   | { type: 'UPDATE_TENANT'; payload: Tenant }
   | { type: 'LOAD_STATE'; payload: AppState };
-
-const STORAGE_KEY = 'crmboo_app_state';
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -110,34 +99,19 @@ function reducer(state: AppState, action: Action): AppState {
 
 const initialState: AppState = {
   cartItems: [],
-  rfqs: initialRFQs,
-  quotes: initialQuotes,
-  followUps: initialFollowUps,
-  purchaseOrders: initialPOs,
-  architects: initialArchitects,
-  customers: initialCustomers,
-  tenants: initialTenants,
+  rfqs: [],
+  quotes: [],
+  followUps: [],
+  purchaseOrders: [],
+  architects: [],
+  customers: [],
+  tenants: [],
 };
 
 const AppContext = createContext<{ state: AppState; dispatch: React.Dispatch<Action> } | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        dispatch({ type: 'LOAD_STATE', payload: JSON.parse(saved) });
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {}
-  }, [state]);
 
   return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
 }

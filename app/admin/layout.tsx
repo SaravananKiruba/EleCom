@@ -94,12 +94,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Frontend route guard — real auth must be enforced server-side
-    if (user.role !== 'admin' && user.role !== 'saasadmin') {
+    if (user.role !== 'TENANT_ADMIN' && user.role !== 'SALES' && user.role !== 'SAAS_ADMIN') {
       router.replace('/login');
     }
   }, [user.role, router]);
 
-  if (user.role !== 'admin' && user.role !== 'saasadmin') return null;
+  if (user.role !== 'TENANT_ADMIN' && user.role !== 'SALES' && user.role !== 'SAAS_ADMIN') return null;
 
   return (
     <Box minH="100vh" bg="gray.50">
