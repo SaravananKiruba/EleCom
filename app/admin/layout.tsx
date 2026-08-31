@@ -12,18 +12,18 @@ import { useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 
 const NAV_ITEMS = [
-  { href: '/admin', label: 'Dashboard', icon: 'D', exact: true },
-  { href: '/admin/rfqs', label: 'RFQs', icon: 'R' },
-  { href: '/admin/quotations', label: 'Quotations', icon: 'Q' },
-  { href: '/admin/follow-ups', label: 'Follow-ups', icon: 'F' },
-  { href: '/admin/customers', label: 'Customers', icon: 'C' },
-  { href: '/admin/architects', label: 'Architects', icon: 'A' },
-  { href: '/admin/products', label: 'Products', icon: 'P' },
-  { href: '/admin/purchase-orders', label: 'Sales Orders', icon: 'S' },
-  { href: '/admin/reports', label: 'Reports', icon: 'Rp' },
-  { href: '/admin/team', label: 'Team', icon: 'Tm' },
-  { href: '/admin/audit', label: 'Audit Log', icon: 'Au' },
-  { href: '/admin/settings', label: 'Store Settings', icon: 'St' },
+  { href: '/admin', label: 'Dashboard', icon: '📊', exact: true },
+  { href: '/admin/rfqs', label: 'RFQs', icon: '📋' },
+  { href: '/admin/quotations', label: 'Quotations', icon: '💬' },
+  { href: '/admin/follow-ups', label: 'Follow-ups', icon: '📅' },
+  { href: '/admin/customers', label: 'Customers', icon: '👥' },
+  { href: '/admin/architects', label: 'Architects', icon: '🏛️' },
+  { href: '/admin/products', label: 'Products', icon: '📦' },
+  { href: '/admin/purchase-orders', label: 'Sales Orders', icon: '🛒' },
+  { href: '/admin/reports', label: 'Reports', icon: '📈' },
+  { href: '/admin/team', label: 'Team', icon: '👤' },
+  { href: '/admin/audit', label: 'Audit Log', icon: '🔍' },
+  { href: '/admin/settings', label: 'Store Settings', icon: '⚙️' },
 ];
 
 function SidebarContent({ pathname, onClose, onLogout }: { pathname: string; onClose?: () => void; onLogout?: () => void }) {
@@ -109,7 +109,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
   }, [user.role, loading, router]);
 
-  if (loading || (user.role !== 'TENANT_ADMIN' && user.role !== 'SALES' && user.role !== 'SAAS_ADMIN')) return null;
+  if (loading) {
+    return (
+      <Box minH="100vh" display="flex" alignItems="center" justifyContent="center" bg="gray.50">
+        <Text color="gray.400" fontSize="sm">Loading…</Text>
+      </Box>
+    );
+  }
+
+  if (user.role !== 'TENANT_ADMIN' && user.role !== 'SALES' && user.role !== 'SAAS_ADMIN') return null;
 
   const handleLogout = () => logout().then(() => router.replace('/login'));
 

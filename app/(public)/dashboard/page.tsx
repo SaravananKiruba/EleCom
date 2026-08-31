@@ -1,11 +1,13 @@
 'use client';
 
 import {
-  Box, Text, SimpleGrid, Flex, HStack, Button, VStack, Badge,
+  Box, Text, SimpleGrid, Flex, HStack, Button, VStack,
   TabsRoot, TabsList, TabsTrigger, TabsContent,
 } from '@chakra-ui/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAppState } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -14,11 +16,28 @@ import { RFQStatus } from '@/types';
 
 export default function CustomerDashboard() {
   const { state } = useAppState();
+  const { user, loading, isCustomer, logout } = useAuth();
+  const router = useRouter();
   const { rfqs, quotes } = state;
 
-  // Simulate logged-in customer — show all rfqs in demo
-  const myRFQs = rfqs;
-  const myQuotes = quotes;
+  if (loading) {
+    return (
+      <Box maxW="1400px" mx="auto" px={6} py={20} textAlign="center">
+        <Text color="gray.400">Loading…</Text>
+      </Box>
+    );
+  }
+
+  if (!isCustomer) {
+    if (typeof window !== 'undefined') router.replace('/login');
+    return null;
+  }
+
+  const handleLogout = () => logout().then(() => router.push('/login'));
+
+  // Filter by logged-in customer in prod; show all in demo when customerId unset
+  const myRFQs = user.customerId ? rfqs.filter(r => r.customerId === user.customerId) : rfqs;
+  const myQuotes = user.customerId ? quotes.filter(q => q.customerId === user.customerId) : quotes;
 
   const stats = {
     total: myRFQs.length,
@@ -33,11 +52,16 @@ export default function CustomerDashboard() {
       <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={3}>
         <Box>
           <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight={700} color="gray.900">My Dashboard</Text>
-          <Text color="gray.500" fontSize="sm" mt={0.5}>Track your quote requests and orders</Text>
+          <Text color="gray.500" fontSize="sm" mt={0.5}>
+            {user.name} · Track your quotes &amp; orders
+          </Text>
         </Box>
-        <Link href="/catalogue">
-          <Button colorPalette="blue" size="sm" rounded="lg">+ New Quote Request</Button>
-        </Link>
+        <HStack gap={2}>
+          <Link href="/catalogue">
+            <Button colorPalette="blue" size="sm">+ New Quote Request</Button>
+          </Link>
+          <Button size="sm" variant="ghost" colorPalette="red" onClick={handleLogout}>Sign Out</Button>
+        </HStack>
       </Flex>
 
       {/* KPIs */}

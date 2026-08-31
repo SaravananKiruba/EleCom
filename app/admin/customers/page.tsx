@@ -17,7 +17,6 @@ import { toaster } from '@/components/ui/toaster';
 import { downloadCSV } from '@/utils/csvExport';
 import { ActivityTimeline } from '@/components/ui/ActivityTimeline';
 import { useAuth } from '@/context/AuthContext';
-import { downloadCSV } from '@/utils/csvExport';
 
 export default function CustomersPage() {
   const { state, dispatch } = useAppState();
