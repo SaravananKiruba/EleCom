@@ -13,7 +13,6 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { toaster } from '@/components/ui/toaster';
-import * as XLSX from 'xlsx';
 
 const PAGE_SIZE = 20;
 
@@ -66,7 +65,8 @@ export default function AdminProductsPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [importOpen, setImportOpen] = useState(false);
-  const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importRows, setImportRows] = useState(0);
   const [importFilename, setImportFilename] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
@@ -242,30 +242,24 @@ export default function AdminProductsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setImportFilename(file.name);
+    setImportFile(file);
     setImportResult(null);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const data = evt.target?.result;
-      const wb = XLSX.read(data, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' });
-      setImportRows(rows);
-    };
-    reader.readAsArrayBuffer(file);
+    // Row count estimate from file size (rough preview — actual count confirmed after import)
+    setImportRows(0);
   };
 
   const handleImport = async () => {
-    if (!tenantId || importRows.length === 0) return;
+    if (!tenantId || !importFile) return;
     setImporting(true);
     setImportResult(null);
     try {
-      const res = await fetch('/api/products/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId, rows: importRows }),
-      });
+      const form = new FormData();
+      form.append('tenantId', tenantId);
+      form.append('file', importFile);
+      const res = await fetch('/api/products/import', { method: 'POST', body: form });
       const result = await res.json();
       setImportResult(result);
+      setImportRows(result.total ?? 0);
       if (result.created > 0) {
         toaster.create({ title: `${result.created} products imported`, type: 'success', duration: 3000 });
         fetchProducts();
@@ -276,13 +270,7 @@ export default function AdminProductsPage() {
   };
 
   const downloadTemplate = () => {
-    const ws = XLSX.utils.aoa_to_sheet([
-      ['name', 'sku', 'brandName', 'categoryName', 'shortDescription', 'description', 'imageUrl', 'basePrice', 'status', 'specKeys', 'specValues'],
-      ['LED Panel 36W', 'LED-PNL-36W', 'Philips', 'LED Panels', '36W Surface Panel', 'Full description here', '', '2500', 'ACTIVE', 'Wattage|Color Temp|IP Rating', '36W|4000K|IP54'],
-    ]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Products');
-    XLSX.writeFile(wb, 'product_import_template.xlsx');
+    window.open('/api/products/template', '_blank');
   };
 
   const clearFilters = () => { setSearch(''); setCatFilter(''); setBrandFilter(''); setStatusFilter(''); setPage(1); };
@@ -295,7 +283,7 @@ export default function AdminProductsPage() {
         subtitle={`${total} products`}
         actions={
           <HStack gap={2}>
-            <Button size="sm" variant="outline" colorPalette="green" onClick={() => { setImportOpen(true); setImportRows([]); setImportFilename(''); setImportResult(null); }}>
+            <Button size="sm" variant="outline" colorPalette="green" onClick={() => { setImportOpen(true); setImportFile(null); setImportRows(0); setImportFilename(''); setImportResult(null); }}>
               ↑ Bulk Import
             </Button>
             <Button colorPalette="blue" size="sm" onClick={openCreate}>+ Add Product</Button>
@@ -574,20 +562,14 @@ export default function AdminProductsPage() {
                 <Text fontSize="2xl" mb={2}>📂</Text>
                 <Text fontSize="sm" fontWeight={600} color="gray.700">Click to select Excel file (.xlsx / .xls)</Text>
                 {importFilename && (
-                  <Text fontSize="xs" color="blue.600" mt={1}>{importFilename} — {importRows.length} rows detected</Text>
+                  <Text fontSize="xs" color="blue.600" mt={1}>{importFilename} — ready to upload</Text>
                 )}
                 <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFileChange} style={{ display: 'none' }} />
               </Box>
 
-              {importRows.length > 0 && (
-                <Box>
-                  <Text fontSize="sm" fontWeight={600} color="gray.700" mb={2}>Preview (first 3 rows):</Text>
-                  <Box overflowX="auto" bg="gray.50" rounded="lg" p={3} fontSize="xs" fontFamily="mono" color="gray.700">
-                    {importRows.slice(0, 3).map((row, i) => (
-                      <Box key={i} mb={1}>{JSON.stringify(row)}</Box>
-                    ))}
-                    {importRows.length > 3 && <Text color="gray.400">…and {importRows.length - 3} more rows</Text>}
-                  </Box>
+              {importRows > 0 && (
+                <Box bg="green.50" rounded="lg" p={3} border="1px solid" borderColor="green.200">
+                  <Text fontSize="sm" fontWeight={600} color="green.700">✓ {importRows} rows processed</Text>
                 </Box>
               )}
 
@@ -609,8 +591,8 @@ export default function AdminProductsPage() {
           </DialogBody>
           <DialogFooter gap={3}>
             <Button variant="ghost" onClick={() => setImportOpen(false)}>Close</Button>
-            <Button colorPalette="green" onClick={handleImport} loading={importing} disabled={importRows.length === 0}>
-              Import {importRows.length > 0 ? `${importRows.length} Products` : ''}
+            <Button colorPalette="green" onClick={handleImport} loading={importing} disabled={!importFile}>
+              {importFile ? `Upload & Import` : 'Select a file first'}
             </Button>
           </DialogFooter>
         </DialogContent>
