@@ -7,10 +7,12 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Architect } from '@/types';
 import { useAppState } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { toaster } from '@/components/ui/toaster';
 
 export default function ArchitectPartnerPage() {
   const { dispatch } = useAppState();
+  const { user } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
     name: '', firmName: '', mobile: '', whatsapp: '', email: '',
@@ -35,6 +37,7 @@ export default function ArchitectPartnerPage() {
 
     const arch: Architect = {
       id: `arch-${Date.now()}`,
+      tenantId: user.tenantId ?? 'tenant-1',
       name: form.name, firmName: form.firmName, mobile: form.mobile, whatsapp: form.whatsapp,
       email: form.email, address: form.address, city: form.city,
       licenseNumber: form.licenseNumber, gst: form.gst, website: form.website,

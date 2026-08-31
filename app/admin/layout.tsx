@@ -5,9 +5,10 @@ import {
   Separator, Badge,
 } from '@chakra-ui/react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState, ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, ReactNode, useEffect } from 'react';
 import { useAppState } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 
 const NAV_ITEMS = [
@@ -34,7 +35,7 @@ function SidebarContent({ pathname, onClose }: { pathname: string; onClose?: () 
           <HStack gap={2}>
             <Box bg="blue.600" color="white" rounded="lg" w={8} h={8} display="flex" alignItems="center" justifyContent="center" fontSize="sm" fontWeight={700}>⚡</Box>
             <Box>
-              <Text fontWeight={800} fontSize="sm" color="gray.900">EleCom Admin</Text>
+              <Text fontWeight={800} fontSize="sm" color="gray.900">CRMBoo Admin</Text>
               <Text fontSize="10px" color="gray.400">CRM Platform</Text>
             </Box>
           </HStack>
@@ -87,7 +88,18 @@ function SidebarContent({ pathname, onClose }: { pathname: string; onClose?: () 
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    // Frontend route guard — real auth must be enforced server-side
+    if (user.role !== 'admin' && user.role !== 'saasadmin') {
+      router.replace('/login');
+    }
+  }, [user.role, router]);
+
+  if (user.role !== 'admin' && user.role !== 'saasadmin') return null;
 
   return (
     <Box minH="100vh" bg="gray.50">
@@ -126,7 +138,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       >
         <HStack gap={2}>
           <Box bg="blue.600" color="white" rounded="lg" w={7} h={7} display="flex" alignItems="center" justifyContent="center" fontSize="xs" fontWeight={700}>⚡</Box>
-          <Text fontWeight={800} fontSize="sm">EleCom Admin</Text>
+          <Text fontWeight={800} fontSize="sm">CRMBoo Admin</Text>
         </HStack>
         <IconButton aria-label="Menu" variant="ghost" size="sm" onClick={() => setDrawerOpen(true)}>☰</IconButton>
       </Box>

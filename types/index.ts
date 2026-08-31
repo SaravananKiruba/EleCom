@@ -1,3 +1,22 @@
+export type TenantStatus = 'active' | 'pending_approval' | 'suspended' | 'rejected';
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  companyEmail: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  gst: string;
+  adminName: string;
+  adminEmail: string;
+  status: TenantStatus;
+  createdAt: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -29,6 +48,7 @@ export interface ProductSpec {
 
 export interface Product {
   id: string;
+  tenantId: string;
   name: string;
   sku: string;
   slug: string;
@@ -63,6 +83,7 @@ export interface RFQItem {
 
 export interface RFQ {
   id: string;
+  tenantId: string;
   rfqNumber: string;
   customerId: string;
   customerName: string;
@@ -109,6 +130,7 @@ export interface QuoteLineItem {
 
 export interface Quote {
   id: string;
+  tenantId: string;
   quoteNumber: string;
   rfqId: string;
   rfqNumber: string;
@@ -135,6 +157,7 @@ export type FollowUpStatus = 'Scheduled' | 'Completed' | 'Overdue' | 'Cancelled'
 
 export interface FollowUp {
   id: string;
+  tenantId: string;
   quoteId: string;
   quoteNumber: string;
   customerId: string;
@@ -150,6 +173,7 @@ export interface FollowUp {
 
 export interface PurchaseOrder {
   id: string;
+  tenantId: string;
   poNumber: string;
   soNumber?: string;
   quoteId: string;
@@ -174,6 +198,7 @@ export type CustomerStatus = 'Active' | 'Inactive';
 
 export interface Customer {
   id: string;
+  tenantId: string;
   name: string;
   companyName: string;
   mobile: string;
@@ -189,6 +214,7 @@ export type ArchitectStatus = 'Pending' | 'Approved' | 'Rejected' | 'Suspended' 
 
 export interface Architect {
   id: string;
+  tenantId: string;
   name: string;
   firmName: string;
   mobile: string;

@@ -2,12 +2,15 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type UserRole = 'guest' | 'customer' | 'architect' | 'admin';
+export type UserRole = 'guest' | 'customer' | 'architect' | 'admin' | 'saasadmin';
 
 export interface AuthUser {
   role: UserRole;
   name: string;
   email?: string;
+  tenantId?: string;
+  tenantName?: string;
+  customerId?: string;
   architectId?: string;
   discount?: number;
 }
@@ -19,10 +22,11 @@ interface AuthContextType {
   isAdmin: boolean;
   isArchitect: boolean;
   isCustomer: boolean;
+  isSaasAdmin: boolean;
 }
 
 const GUEST: AuthUser = { role: 'guest', name: 'Guest' };
-const AUTH_KEY = 'elecom_auth';
+const AUTH_KEY = 'crmboo_auth';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -54,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: user.role === 'admin',
       isArchitect: user.role === 'architect',
       isCustomer: user.role === 'customer',
+      isSaasAdmin: user.role === 'saasadmin',
     }}>
       {children}
     </AuthContext.Provider>

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppState } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { products, brands } from '@/data/mockData';
 import { RFQ } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -19,6 +20,7 @@ function generateRFQNumber() {
 
 export default function RFQPage() {
   const { state, dispatch } = useAppState();
+  const { user } = useAuth();
   const router = useRouter();
   const { cartItems } = state;
 
@@ -49,8 +51,9 @@ export default function RFQPage() {
     const rfqNumber = generateRFQNumber();
     const rfq: RFQ = {
       id: `rfq-${Date.now()}`,
+      tenantId: user.tenantId ?? 'tenant-1',
       rfqNumber,
-      customerId: 'cust-self',
+      customerId: user.customerId ?? 'cust-self',
       ...form,
       items: cartItems.map(i => ({ productId: i.productId, quantity: i.quantity })),
       status: 'New',

@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'EleCom — B2B Electrical Products',
-  description: 'Professional B2B electrical products catalogue and quotation management platform.',
+  title: 'CRMBoo — B2B Lighting CRM & E-Commerce',
+  description: 'Multi-tenant B2B sales platform and CRM for lighting and electrical products.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

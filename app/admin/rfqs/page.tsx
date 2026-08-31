@@ -6,6 +6,7 @@ import {
 } from '@chakra-ui/react';
 import { useState, useMemo } from 'react';
 import { useAppState } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { SearchInput } from '@/components/ui/SearchInput';
@@ -22,6 +23,7 @@ const SALESPEOPLE = ['Arjun Sales', 'Preethi CRM', 'Vikram Sales'];
 
 export default function AdminRFQsPage() {
   const { state, dispatch } = useAppState();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -73,6 +75,7 @@ export default function AdminRFQsPage() {
     const quoteNumber = `QTE-2026-${Math.floor(200000 + Math.random() * 99999)}`;
     const newQuote: Quote = {
       id: `qte-${Date.now()}`,
+      tenantId: user.tenantId ?? 'tenant-1',
       quoteNumber,
       rfqId: rfq.id,
       rfqNumber: rfq.rfqNumber,

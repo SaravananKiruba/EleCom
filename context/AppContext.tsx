@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { QuoteCartItem, RFQ, Quote, FollowUp, PurchaseOrder, Architect, Customer } from '@/types';
+import { QuoteCartItem, RFQ, Quote, FollowUp, PurchaseOrder, Architect, Customer, Tenant } from '@/types';
 import {
   rfqs as initialRFQs,
   quotes as initialQuotes,
@@ -9,6 +9,7 @@ import {
   purchaseOrders as initialPOs,
   architects as initialArchitects,
   customers as initialCustomers,
+  tenants as initialTenants,
 } from '@/data/mockData';
 
 interface AppState {
@@ -19,6 +20,7 @@ interface AppState {
   purchaseOrders: PurchaseOrder[];
   architects: Architect[];
   customers: Customer[];
+  tenants: Tenant[];
 }
 
 type Action =
@@ -36,10 +38,13 @@ type Action =
   | { type: 'UPDATE_PO'; payload: PurchaseOrder }
   | { type: 'UPDATE_ARCHITECT'; payload: Architect }
   | { type: 'ADD_ARCHITECT'; payload: Architect }
+  | { type: 'ADD_CUSTOMER'; payload: Customer }
   | { type: 'UPDATE_CUSTOMER'; payload: Customer }
+  | { type: 'ADD_TENANT'; payload: Tenant }
+  | { type: 'UPDATE_TENANT'; payload: Tenant }
   | { type: 'LOAD_STATE'; payload: AppState };
 
-const STORAGE_KEY = 'elecom_app_state';
+const STORAGE_KEY = 'crmboo_app_state';
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -90,8 +95,14 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, architects: state.architects.map(a => a.id === action.payload.id ? action.payload : a) };
     case 'ADD_ARCHITECT':
       return { ...state, architects: [action.payload, ...state.architects] };
+    case 'ADD_CUSTOMER':
+      return { ...state, customers: [action.payload, ...state.customers] };
     case 'UPDATE_CUSTOMER':
       return { ...state, customers: state.customers.map(c => c.id === action.payload.id ? action.payload : c) };
+    case 'ADD_TENANT':
+      return { ...state, tenants: [action.payload, ...state.tenants] };
+    case 'UPDATE_TENANT':
+      return { ...state, tenants: state.tenants.map(t => t.id === action.payload.id ? action.payload : t) };
     default:
       return state;
   }
@@ -105,6 +116,7 @@ const initialState: AppState = {
   purchaseOrders: initialPOs,
   architects: initialArchitects,
   customers: initialCustomers,
+  tenants: initialTenants,
 };
 
 const AppContext = createContext<{ state: AppState; dispatch: React.Dispatch<Action> } | null>(null);

@@ -6,6 +6,7 @@ import {
 } from '@chakra-ui/react';
 import { useState, useMemo } from 'react';
 import { useAppState } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { SearchInput } from '@/components/ui/SearchInput';
@@ -22,6 +23,7 @@ const LOST_REASONS = ['Price too high', 'Competitor', 'Requirement cancelled', '
 
 export default function AdminQuotationsPage() {
   const { state, dispatch } = useAppState();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -73,6 +75,7 @@ export default function AdminQuotationsPage() {
     const soNum = `SO-2026-${Math.floor(300000 + Math.random() * 99999)}`;
     const so: PurchaseOrder = {
       id: `so-${Date.now()}`,
+      tenantId: user.tenantId ?? 'tenant-1',
       poNumber: soNum, soNumber: soNum,
       quoteId: q.id, quoteNumber: q.quoteNumber, rfqNumber: q.rfqNumber,
       customerId: q.customerId, customerName: q.customerName, companyName: q.companyName,

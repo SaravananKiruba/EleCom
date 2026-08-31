@@ -6,6 +6,7 @@ import {
 } from '@chakra-ui/react';
 import { useState } from 'react';
 import { useAppState } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -17,6 +18,7 @@ const STATUSES: FollowUpStatus[] = ['Scheduled', 'Completed', 'Overdue', 'Cancel
 
 export default function FollowUpsPage() {
   const { state, dispatch } = useAppState();
+  const { user } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<FollowUp | null>(null);
   const [form, setForm] = useState({ customerName: '', quoteNumber: '', contactPerson: '', method: 'WhatsApp' as FollowUpMethod, nextFollowUp: '', notes: '', assignedTo: '', status: 'Scheduled' as FollowUpStatus });
@@ -40,7 +42,7 @@ export default function FollowUpsPage() {
       toaster.create({ title: 'Follow-up updated', type: 'success', duration: 2000 });
     } else {
       const newFU: FollowUp = {
-        id: `fu-${Date.now()}`, quoteId: '', quoteNumber: form.quoteNumber, customerId: '', customerName: form.customerName,
+        id: `fu-${Date.now()}`, tenantId: user.tenantId ?? 'tenant-1', quoteId: '', quoteNumber: form.quoteNumber, customerId: '', customerName: form.customerName,
         contactPerson: form.contactPerson, method: form.method, lastContact: '2026-08-22', nextFollowUp: form.nextFollowUp,
         status: form.status, assignedTo: form.assignedTo, notes: form.notes,
       };

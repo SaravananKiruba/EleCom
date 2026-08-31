@@ -44,11 +44,11 @@ export function PublicHeader() {
           {/* Logo */}
           <Link href="/" style={{ textDecoration: 'none' }}>
             <HStack gap={2}>
-              <Box bg="blue.600" color="white" rounded="lg" w={8} h={8} display="flex" alignItems="center" justifyContent="center" fontSize="sm" fontWeight={700}>
+              <Box bg="green.600" color="white" rounded="lg" w={8} h={8} display="flex" alignItems="center" justifyContent="center" fontSize="sm" fontWeight={700}>
                 💡
               </Box>
               <Text fontWeight={800} fontSize="lg" color="gray.900" letterSpacing="-0.5px">
-                EleCom <Text as="span" color="blue.600">Lighting</Text>
+                CRMBoo
               </Text>
             </HStack>
           </Link>

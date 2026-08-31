@@ -9,9 +9,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth, AuthUser } from '@/context/AuthContext';
 import { architects } from '@/data/mockData';
 
-type Tab = 'customer' | 'architect' | 'admin';
+type Tab = 'customer' | 'architect' | 'admin' | 'saas';
 
 const ADMIN_PASS = 'admin123';
+const SAAS_PASS = 'saas123';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -24,7 +25,7 @@ export default function LoginPage() {
 
   const handleCustomer = () => {
     if (!name.trim()) { setError('Please enter your name'); return; }
-    const user: AuthUser = { role: 'customer', name: name.trim(), email: email.trim() || undefined };
+    const user: AuthUser = { role: 'customer', name: name.trim(), email: email.trim() || undefined, tenantId: 'tenant-1' };
     login(user);
     router.push('/dashboard');
   };
@@ -36,22 +37,30 @@ export default function LoginPage() {
     if (!['Active', 'Approved'].includes(arch.status)) {
       setError(`Your account is ${arch.status}. Please wait for admin approval.`); return;
     }
-    const user: AuthUser = { role: 'architect', name: arch.name, email: arch.email, architectId: arch.id, discount: arch.discount };
+    const user: AuthUser = { role: 'architect', name: arch.name, email: arch.email, tenantId: arch.tenantId, architectId: arch.id, discount: arch.discount };
     login(user);
     router.push('/catalogue');
   };
 
   const handleAdmin = () => {
     if (password !== ADMIN_PASS) { setError('Incorrect password'); return; }
-    const user: AuthUser = { role: 'admin', name: 'Admin' };
+    const user: AuthUser = { role: 'admin', name: 'Arjun Mehta', tenantId: 'tenant-1', tenantName: 'CVS Lighting' };
     login(user);
     router.push('/admin');
+  };
+
+  const handleSaas = () => {
+    if (password !== SAAS_PASS) { setError('Incorrect password'); return; }
+    const user: AuthUser = { role: 'saasadmin', name: 'Platform Admin', email: 'saasadmin@crmboo.com' };
+    login(user);
+    router.push('/saas-admin');
   };
 
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: 'customer', label: 'Customer', icon: '👤' },
     { id: 'architect', label: 'Architect', icon: '🏛️' },
     { id: 'admin', label: 'Admin', icon: '⚡' },
+    { id: 'saas', label: 'SaaS', icon: '🌐' },
   ];
 
   return (
@@ -60,8 +69,8 @@ export default function LoginPage() {
         <Box textAlign="center" mb={8}>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <HStack gap={2} justify="center" mb={4}>
-              <Box bg="blue.600" color="white" rounded="xl" w={10} h={10} display="flex" alignItems="center" justifyContent="center" fontSize="lg" fontWeight={700}>💡</Box>
-              <Text fontWeight={800} fontSize="xl" color="gray.900">EleCom <Text as="span" color="blue.600">Lighting</Text></Text>
+              <Box bg="green.600" color="white" rounded="xl" w={10} h={10} display="flex" alignItems="center" justifyContent="center" fontSize="lg" fontWeight={700}>💡</Box>
+              <Text fontWeight={800} fontSize="xl" color="gray.900">CRMBoo</Text>
             </HStack>
           </Link>
           <Text fontSize="2xl" fontWeight={700} color="gray.900">Sign In</Text>
@@ -82,7 +91,7 @@ export default function LoginPage() {
                 bg={tab === t.id ? 'white' : 'transparent'}
                 shadow={tab === t.id ? 'sm' : 'none'}
                 transition="all 0.15s"
-                onClick={() => { setTab(t.id); setError(''); }}
+                onClick={() => { setTab(t.id); setError(''); setPassword(''); }}
               >
                 <Text fontSize="xs" fontWeight={700} color={tab === t.id ? 'blue.700' : 'gray.500'}>{t.icon} {t.label}</Text>
               </Box>
@@ -111,6 +120,9 @@ export default function LoginPage() {
               <Button colorPalette="blue" onClick={handleCustomer} w="full" size="lg" rounded="xl">
                 Continue as Customer
               </Button>
+              <Link href="/signup" style={{ textDecoration: 'none' }}>
+                <Text fontSize="sm" color="blue.600" textAlign="center">New company? Create an account →</Text>
+              </Link>
             </VStack>
           )}
 
@@ -137,7 +149,7 @@ export default function LoginPage() {
           {tab === 'admin' && (
             <VStack gap={4} align="stretch">
               <Box bg="gray.50" rounded="lg" p={3} border="1px solid" borderColor="gray.200">
-                <Text fontSize="xs" color="gray.600" fontWeight={600}>Admin access only. Demo password: admin123</Text>
+                <Text fontSize="xs" color="gray.600" fontWeight={600}>Tenant admin access. Demo password: admin123</Text>
               </Box>
               <Field.Root>
                 <Field.Label fontSize="sm" fontWeight={600}>Admin Password</Field.Label>
@@ -146,6 +158,22 @@ export default function LoginPage() {
               </Field.Root>
               <Button colorPalette="blue" onClick={handleAdmin} w="full" size="lg" rounded="xl">
                 Sign In as Admin
+              </Button>
+            </VStack>
+          )}
+
+          {tab === 'saas' && (
+            <VStack gap={4} align="stretch">
+              <Box bg="gray.800" rounded="lg" p={3}>
+                <Text fontSize="xs" color="gray.300" fontWeight={600}>CRMBoo platform admin. Demo password: saas123</Text>
+              </Box>
+              <Field.Root>
+                <Field.Label fontSize="sm" fontWeight={600}>SaaS Admin Password</Field.Label>
+                <Input type="password" placeholder="Enter password" value={password} onChange={e => setPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSaas()} />
+              </Field.Root>
+              <Button colorPalette="gray" bg="gray.800" color="white" onClick={handleSaas} w="full" size="lg" rounded="xl">
+                Sign In as SaaS Admin
               </Button>
             </VStack>
           )}
