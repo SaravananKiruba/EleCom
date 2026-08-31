@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProducts } from '@/src/server/services/productService';
+import { getProducts, createProduct } from '@/src/server/services/productService';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -18,4 +18,16 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json(result);
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { tenantId, ...data } = body;
+  if (!tenantId) return NextResponse.json({ error: 'tenantId required' }, { status: 400 });
+  try {
+    const product = await createProduct(tenantId, data);
+    return NextResponse.json(product, { status: 201 });
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 422 });
+  }
 }
