@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Text, Flex, Button, VStack, HStack, Input, Field } from '@chakra-ui/react';
+import { Box, Text, Button, VStack, HStack, Input, Field, Badge, Spinner } from '@chakra-ui/react';
 import { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -11,6 +11,17 @@ interface DbTenant {
   id: string; slug: string; name: string; email: string; phone?: string;
   gstNumber?: string; status: string; createdAt: string;
   users?: { id: string; name: string; email: string; role: string }[];
+}
+
+interface DomainRecord {
+  id: string; domain: string; isPrimary: boolean;
+  domainStatus: string; verifiedAt: string | null; createdAt: string;
+}
+
+/** Detect whether a domain is a root apex domain or a subdomain */
+function domainType(domain: string): 'apex' | 'subdomain' {
+  const parts = domain.split('.');
+  return parts.length <= 2 ? 'apex' : 'subdomain';
 }
 
 interface CreateForm {
@@ -29,6 +40,14 @@ export default function SaasAdminTenantsPage() {
   const [createError, setCreateError] = useState('');
   const [creating, setCreating] = useState(false);
 
+  // Domain management state
+  const [domains, setDomains] = useState<DomainRecord[]>([]);
+  const [domainsLoading, setDomainsLoading] = useState(false);
+  const [newDomain, setNewDomain] = useState('');
+  const [domainError, setDomainError] = useState('');
+  const [addingDomain, setAddingDomain] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     const res = await fetch('/api/tenants?take=100');
     const data = await res.json();
@@ -36,6 +55,23 @@ export default function SaasAdminTenantsPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadDomains = useCallback(async (tenantId: string) => {
+    setDomainsLoading(true);
+    try {
+      const res = await fetch(`/api/store/domains?tenantId=${tenantId}`);
+      setDomains(await res.json());
+    } finally {
+      setDomainsLoading(false);
+    }
+  }, []);
+
+  const openTenant = (tenant: DbTenant) => {
+    setSelected(tenant);
+    setNewDomain('');
+    setDomainError('');
+    loadDomains(tenant.id);
+  };
 
   const filtered = tenants.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -50,6 +86,40 @@ export default function SaasAdminTenantsPage() {
     });
     load();
     setSelected(null);
+  };
+
+  const addDomain = async () => {
+    if (!selected || !newDomain.trim()) return;
+    setDomainError('');
+    setAddingDomain(true);
+    try {
+      const res = await fetch('/api/store/domains', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: selected.id, domain: newDomain.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setDomainError(data.error ?? 'Failed to add domain'); return; }
+      setNewDomain('');
+      loadDomains(selected.id);
+    } finally {
+      setAddingDomain(false);
+    }
+  };
+
+  const verifyDomain = async (domainId: string) => {
+    setVerifyingId(domainId);
+    try {
+      await fetch(`/api/store/domains/${domainId}`, { method: 'PATCH' });
+      if (selected) loadDomains(selected.id);
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  const removeDomain = async (domainId: string) => {
+    await fetch(`/api/store/domains/${domainId}`, { method: 'DELETE' });
+    if (selected) loadDomains(selected.id);
   };
 
   const setF = (k: keyof CreateForm, v: string) => setCreateForm(f => ({ ...f, [k]: v }));
@@ -106,7 +176,7 @@ export default function SaasAdminTenantsPage() {
                 <tr
                   key={tenant.id}
                   style={{ borderBottom: '1px solid #f9fafb', cursor: 'pointer' }}
-                  onClick={() => setSelected(tenant)}
+                  onClick={() => openTenant(tenant)}
                 >
                   <td style={{ padding: '12px 16px' }}>
                     <Text fontWeight={600} fontSize="sm" color="gray.800">{tenant.name}</Text>
@@ -163,6 +233,93 @@ export default function SaasAdminTenantsPage() {
                 ))}
               </Box>
             )}
+
+            {/* ── Custom Domains ── */}
+            <Box borderTop="1px solid" borderColor="gray.100" pt={4}>
+              <Text fontSize="xs" fontWeight={700} color="gray.600" mb={3} textTransform="uppercase">Custom Domains</Text>
+
+              {domainsLoading ? (
+                <Spinner size="sm" />
+              ) : (
+                <VStack align="stretch" gap={2} mb={3}>
+                  {domains.length === 0 && (
+                    <Text fontSize="xs" color="gray.400">No custom domains yet.</Text>
+                  )}
+                  {domains.map(d => {
+                    const isApex = domainType(d.domain) === 'apex';
+                    return (
+                      <Box key={d.id} p={3} bg="gray.50" rounded="md" border="1px solid" borderColor="gray.200">
+                        <HStack justify="space-between" mb={1}>
+                          <Text fontSize="sm" fontWeight={600}>{d.domain}</Text>
+                          <Badge
+                            size="sm"
+                            colorPalette={d.domainStatus === 'verified' ? 'green' : d.domainStatus === 'failed' ? 'red' : 'orange'}
+                          >
+                            {d.domainStatus === 'verified' ? 'Verified' : d.domainStatus === 'failed' ? 'Failed' : 'Pending DNS'}
+                          </Badge>
+                        </HStack>
+
+                        {/* DNS instructions — shown while pending */}
+                        {d.domainStatus !== 'verified' && (
+                          <Box mt={2} p={2} bg="blue.50" rounded="sm" border="1px solid" borderColor="blue.100">
+                            <Text fontSize="xs" fontWeight={700} color="blue.700" mb={1}>
+                              Add this DNS record at your domain registrar:
+                            </Text>
+                            {isApex ? (
+                              <Box fontFamily="mono" fontSize="xs" color="blue.900">
+                                <Text>Type: <b>A</b></Text>
+                                <Text>Host: <b>@</b></Text>
+                                <Text>Value: <b>76.76.21.21</b></Text>
+                              </Box>
+                            ) : (
+                              <Box fontFamily="mono" fontSize="xs" color="blue.900">
+                                <Text>Type: <b>CNAME</b></Text>
+                                <Text>Host: <b>{d.domain.split('.')[0]}</b></Text>
+                                <Text>Value: <b>cname.vercel-dns.com</b></Text>
+                              </Box>
+                            )}
+                            <Text fontSize="xs" color="gray.500" mt={1}>
+                              Works the same on GoDaddy, Namecheap, Cloudflare, etc. — only the UI differs.
+                            </Text>
+                          </Box>
+                        )}
+
+                        <HStack gap={2} mt={2}>
+                          {d.domainStatus !== 'verified' && (
+                            <Button size="xs" variant="outline" colorPalette="blue"
+                              loading={verifyingId === d.id}
+                              onClick={() => verifyDomain(d.id)}
+                            >
+                              Check DNS
+                            </Button>
+                          )}
+                          <Button size="xs" variant="ghost" colorPalette="red" onClick={() => removeDomain(d.id)}>
+                            Remove
+                          </Button>
+                        </HStack>
+                      </Box>
+                    );
+                  })}
+                </VStack>
+              )}
+
+              {/* Add new domain */}
+              {domainError && (
+                <Text fontSize="xs" color="red.500" mb={2}>{domainError}</Text>
+              )}
+              <HStack>
+                <Input
+                  size="sm"
+                  placeholder="shop.theirdomain.com"
+                  value={newDomain}
+                  onChange={e => setNewDomain(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addDomain()}
+                />
+                <Button size="sm" colorPalette="blue" loading={addingDomain} onClick={addDomain} flexShrink={0}>
+                  Add
+                </Button>
+              </HStack>
+            </Box>
 
             <Box borderTop="1px solid" borderColor="gray.100" pt={4}>
               <Text fontSize="xs" fontWeight={600} color="gray.600" mb={3}>Actions</Text>
