@@ -48,6 +48,11 @@ export default function SaasAdminTenantsPage() {
   const [addingDomain, setAddingDomain] = useState(false);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
+  // Delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
   const load = useCallback(async () => {
     const res = await fetch('/api/tenants?take=100');
     const data = await res.json();
@@ -70,6 +75,8 @@ export default function SaasAdminTenantsPage() {
     setSelected(tenant);
     setNewDomain('');
     setDomainError('');
+    setDeleteConfirm('');
+    setDeleteError('');
     loadDomains(tenant.id);
   };
 
@@ -120,6 +127,28 @@ export default function SaasAdminTenantsPage() {
   const removeDomain = async (domainId: string) => {
     await fetch(`/api/store/domains/${domainId}`, { method: 'DELETE' });
     if (selected) loadDomains(selected.id);
+  };
+
+  const deleteTenant = async () => {
+    if (!selected) return;
+    if (deleteConfirm !== selected.slug) {
+      setDeleteError(`Type "${selected.slug}" to confirm.`);
+      return;
+    }
+    setDeleteError('');
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/tenants/${selected.id}?confirm=${encodeURIComponent(selected.slug)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) { setDeleteError(data.error ?? 'Delete failed'); return; }
+      setSelected(null);
+      setDeleteConfirm('');
+      load();
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const setF = (k: keyof CreateForm, v: string) => setCreateForm(f => ({ ...f, [k]: v }));
@@ -331,6 +360,43 @@ export default function SaasAdminTenantsPage() {
                   <Button size="sm" colorPalette="orange" variant="outline" onClick={() => updateStatus(selected, 'suspend')}>Suspend</Button>
                 )}
               </VStack>
+            </Box>
+
+            {/* ── Danger Zone: Permanent Delete ── */}
+            <Box borderTop="1px solid" borderColor="red.100" pt={4} mt={2}>
+              <Text fontSize="xs" fontWeight={700} color="red.600" mb={2} textTransform="uppercase">Danger Zone</Text>
+              <Box p={3} bg="red.50" rounded="md" border="1px solid" borderColor="red.200">
+                <Text fontSize="sm" color="red.700" mb={2} fontWeight={600}>
+                  Delete this tenant permanently
+                </Text>
+                <Text fontSize="xs" color="red.600" mb={3}>
+                  This will remove the tenant and ALL related data: users, customers, products, RFQs, quotes, sales orders, follow-ups, activities, audit logs, subscriptions, domains and settings. This action cannot be undone.
+                </Text>
+                <Field.Root mb={2}>
+                  <Field.Label fontSize="xs" color="red.700">
+                    Type <b>{selected.slug}</b> to confirm:
+                  </Field.Label>
+                  <Input
+                    size="sm"
+                    value={deleteConfirm}
+                    onChange={e => setDeleteConfirm(e.target.value)}
+                    placeholder={selected.slug}
+                    bg="white"
+                  />
+                </Field.Root>
+                {deleteError && <Text fontSize="xs" color="red.600" mb={2}>{deleteError}</Text>}
+                <Button
+                  size="sm"
+                  colorPalette="red"
+                  width="full"
+                  disabled={deleteConfirm !== selected.slug || deleting}
+                  loading={deleting}
+                  loadingText="Deleting..."
+                  onClick={deleteTenant}
+                >
+                  Permanently delete tenant
+                </Button>
+              </Box>
             </Box>
           </VStack>
         )}
