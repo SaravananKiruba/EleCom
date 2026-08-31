@@ -47,7 +47,6 @@ export default function ArchitectPortalPage() {
           <Text color="gray.500" fontSize="sm">Welcome back, {user.name}</Text>
         </Box>
         <HStack gap={2}>
-          <Link href="/catalogue"><Button colorPalette="blue" size="sm">Browse Products</Button></Link>
           <Button size="sm" variant="ghost" colorPalette="red" onClick={handleLogout}>Sign Out</Button>
         </HStack>
       </Flex>

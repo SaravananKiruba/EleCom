@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { PublicHeader } from '@/components/layout/PublicHeader';
+import { StoreHeader } from '@/components/layout/StoreHeader';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import { TenantStoreProvider } from '@/context/TenantStoreContext';
 
@@ -14,7 +14,7 @@ export default async function StoreLayout({
 
   return (
     <TenantStoreProvider slug={tenantSlug}>
-      <PublicHeader />
+      <StoreHeader tenantSlug={tenantSlug} />
       <main>{children}</main>
       <PublicFooter />
     </TenantStoreProvider>

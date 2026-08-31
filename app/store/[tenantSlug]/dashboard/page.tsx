@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Box, Text, SimpleGrid, Flex, HStack, Button, VStack, TabsRoot, TabsList, TabsTrigger, TabsContent } from '@chakra-ui/react';
@@ -11,7 +11,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { RFQ, Quote } from '@/types';
 import { formatCurrency } from '@/utils/format';
 
-export default function CustomerDashboard() {
+export default function StoreCustomerDashboard({
+  params,
+}: {
+  params: Promise<{ tenantSlug: string }>;
+}) {
+  const { tenantSlug } = use(params);
   const { user, loading, isCustomer, logout } = useAuth();
   const router = useRouter();
 
@@ -21,7 +26,7 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     if (loading) return;
-    if (!isCustomer) { router.replace('/login'); return; }
+    if (!isCustomer) { router.replace(`/login?next=${encodeURIComponent(`/store/${tenantSlug}/dashboard`)}`); return; }
     Promise.all([
       fetch('/api/rfqs?take=100').then(r => r.json()),
       fetch('/api/quotes?take=100').then(r => r.json()),
@@ -29,12 +34,12 @@ export default function CustomerDashboard() {
       setRfqs(r.rfqs ?? []);
       setQuotes(q.quotes ?? []);
     }).finally(() => setDataLoading(false));
-  }, [loading, isCustomer, router]);
+  }, [loading, isCustomer, router, tenantSlug]);
 
   if (loading || dataLoading) return <Box p={20} textAlign="center" color="gray.400">Loading…</Box>;
   if (!isCustomer) return null;
 
-  const handleLogout = () => logout().then(() => router.push('/login'));
+  const handleLogout = () => logout().then(() => router.push(`/store/${tenantSlug}/catalogue`));
 
   const stats = {
     total: rfqs.length,
@@ -51,7 +56,7 @@ export default function CustomerDashboard() {
           <Text color="gray.500" fontSize="sm">{user.name} · Track your quotes &amp; orders</Text>
         </Box>
         <HStack gap={2}>
-          <Link href="/catalogue"><Button colorPalette="blue" size="sm">+ New Quote Request</Button></Link>
+          <Link href={`/store/${tenantSlug}/catalogue`}><Button colorPalette="blue" size="sm">+ New Quote Request</Button></Link>
           <Button size="sm" variant="ghost" colorPalette="red" onClick={handleLogout}>Sign Out</Button>
         </HStack>
       </Flex>
@@ -71,7 +76,8 @@ export default function CustomerDashboard() {
 
         <TabsContent value="rfqs">
           {rfqs.length === 0 ? (
-            <EmptyState icon="📋" title="No RFQs yet" action={<Link href="/catalogue"><Button colorPalette="blue" size="sm">Browse Products</Button></Link>} />
+            <EmptyState icon="📋" title="No RFQs yet"
+              action={<Link href={`/store/${tenantSlug}/catalogue`}><Button colorPalette="blue" size="sm">Browse Products</Button></Link>} />
           ) : (
             <VStack gap={3} align="stretch">
               {rfqs.map(rfq => (
@@ -115,7 +121,7 @@ export default function CustomerDashboard() {
                     <Box textAlign="right">
                       <Text fontSize="xs" color="gray.500">Quote Value</Text>
                       <Text fontWeight={800} fontSize="lg" color="gray.900">{formatCurrency(Number(quote.totalAmount))}</Text>
-                      <Link href={`/quotation/${quote.id}`}>
+                      <Link href={`/store/${tenantSlug}/quotation/${quote.id}`}>
                         <Button size="sm" colorPalette="blue" mt={2} rounded="lg">View Quote</Button>
                       </Link>
                     </Box>

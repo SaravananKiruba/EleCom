@@ -103,7 +103,7 @@ export async function createProduct(tenantId: string, data: ProductInput) {
       description: data.description ?? null,
       imageUrl: data.imageUrl ?? null,
       basePrice: data.basePrice != null ? data.basePrice : null,
-      status: data.status ?? 'DRAFT',
+      status: data.status ?? 'ACTIVE',
       isFeatured: data.isFeatured ?? false,
       specifications: data.specifications?.length
         ? { createMany: { data: data.specifications.map((s, i) => ({ specKey: s.specKey, specValue: s.specValue, unit: s.unit, sortOrder: s.sortOrder ?? i })) } }

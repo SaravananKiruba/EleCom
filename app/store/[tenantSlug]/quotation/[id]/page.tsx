@@ -8,8 +8,12 @@ import { Quote } from '@/types';
 import { formatCurrency, formatEnum } from '@/utils/format';
 import { toaster } from '@/components/ui/toaster';
 
-export default function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function StoreQuotationDetailPage({
+  params,
+}: {
+  params: Promise<{ tenantSlug: string; id: string }>;
+}) {
+  const { tenantSlug, id } = use(params);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -45,7 +49,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ id: 
   return (
     <Box maxW="960px" mx="auto" px={{ base: 4, md: 6 }} py={6}>
       <HStack gap={1} mb={5} fontSize="sm" color="gray.500">
-        <Link href="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>Dashboard</Link>
+        <Link href={`/store/${tenantSlug}/dashboard`} style={{ textDecoration: 'none', color: 'inherit' }}>Dashboard</Link>
         <Text>/</Text>
         <Text color="gray.800" fontWeight={500}>{quote.quoteNumber}</Text>
       </HStack>
