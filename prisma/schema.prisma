@@ -193,6 +193,7 @@ model Tenant {
   subscriptions      Subscription[]
   tenantSettings     TenantSetting[]
   documentSequences  DocumentSequence[]
+  customDomains      TenantCustomDomain[]
 
   @@index([status])
 }
@@ -855,5 +856,23 @@ model DocumentSequence {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, documentType, year])
+  @@index([tenantId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// TENANT CUSTOM DOMAIN (for ecommerce custom domain mapping)
+// ─────────────────────────────────────────────────────────────
+
+model TenantCustomDomain {
+  id         String    @id @default(cuid())
+  tenantId   String
+  domain     String    @unique
+  isPrimary  Boolean   @default(false)
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
   @@index([tenantId])
 }

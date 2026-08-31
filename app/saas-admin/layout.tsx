@@ -1,26 +1,27 @@
 'use client';
 
-import { Box, Flex, HStack, Text, VStack, Separator } from '@chakra-ui/react';
+import { Box, Flex, HStack, Text, VStack, Separator, Badge } from '@chakra-ui/react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const NAV = [
-  { href: '/saas-admin', label: 'Dashboard', icon: '📊' },
-  { href: '/saas-admin/tenants', label: 'Tenants', icon: '🏢' },
+  { href: '/saas-admin', label: 'Dashboard', icon: 'D' },
+  { href: '/saas-admin/tenants', label: 'Tenants', icon: 'T' },
 ];
 
 export default function SaasAdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isSaasAdmin } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    // Frontend route guard — real auth must be enforced server-side
-    if (user.role !== 'SAAS_ADMIN') {
-      router.replace('/login');
-    }
+    if (user.role !== 'SAAS_ADMIN') { router.replace('/login'); return; }
+    fetch('/api/tenants?status=PENDING_APPROVAL&take=100')
+      .then(r => r.ok ? r.json() : { total: 0 })
+      .then(d => setPendingCount(d.total ?? 0));
   }, [user.role, router]);
 
   if (!isSaasAdmin) return null;
@@ -40,9 +41,15 @@ export default function SaasAdminLayout({ children }: { children: React.ReactNod
                 px={4} py={3} gap={3} cursor="pointer"
                 bg={pathname === n.href ? 'gray.700' : 'transparent'}
                 _hover={{ bg: 'gray.700' }}
+                justify="space-between"
               >
-                <Text fontSize="sm">{n.icon}</Text>
-                <Text fontSize="sm" fontWeight={pathname === n.href ? 700 : 400} color="gray.100">{n.label}</Text>
+                <HStack gap={3}>
+                  <Text fontSize="sm">{n.icon}</Text>
+                  <Text fontSize="sm" fontWeight={pathname === n.href ? 700 : 400} color="gray.100">{n.label}</Text>
+                </HStack>
+                {n.href === '/saas-admin/tenants' && pendingCount > 0 && (
+                  <Badge colorPalette="orange" size="sm" rounded="full">{pendingCount}</Badge>
+                )}
               </HStack>
             </Link>
           ))}

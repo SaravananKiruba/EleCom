@@ -12,15 +12,16 @@ import { useAuth } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 
 const NAV_ITEMS = [
-  { href: '/admin', label: 'Dashboard', icon: '📊', exact: true },
-  { href: '/admin/rfqs', label: 'RFQs', icon: '📋' },
-  { href: '/admin/quotations', label: 'Quotations', icon: '💬' },
-  { href: '/admin/follow-ups', label: 'Follow-ups', icon: '📅' },
-  { href: '/admin/customers', label: 'Customers', icon: '👥' },
-  { href: '/admin/architects', label: 'Architects', icon: '🏛️' },
-  { href: '/admin/products', label: 'Products', icon: '📦' },
-  { href: '/admin/purchase-orders', label: 'Sales Orders', icon: '📦' },
-  { href: '/admin/reports', label: 'Reports', icon: '📈' },
+  { href: '/admin', label: 'Dashboard', icon: 'D', exact: true },
+  { href: '/admin/rfqs', label: 'RFQs', icon: 'R' },
+  { href: '/admin/quotations', label: 'Quotations', icon: 'Q' },
+  { href: '/admin/follow-ups', label: 'Follow-ups', icon: 'F' },
+  { href: '/admin/customers', label: 'Customers', icon: 'C' },
+  { href: '/admin/architects', label: 'Architects', icon: 'A' },
+  { href: '/admin/products', label: 'Products', icon: 'P' },
+  { href: '/admin/purchase-orders', label: 'Sales Orders', icon: 'S' },
+  { href: '/admin/reports', label: 'Reports', icon: 'Rp' },
+  { href: '/admin/settings', label: 'Store Settings', icon: 'St' },
 ];
 
 function SidebarContent({ pathname, onClose }: { pathname: string; onClose?: () => void }) {

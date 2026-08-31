@@ -108,6 +108,10 @@ export default function LoginPage() {
             Architect partner?{' '}
             <Link href="/architect-partner" style={{ color: '#6b8375', fontWeight: 600 }}>Register here</Link>
           </Text>
+          <Text fontSize="sm" color="gray.500">
+            Own a lighting/electrical business?{' '}
+            <Link href="/join" style={{ color: '#6b8375', fontWeight: 700 }}>Register your business</Link>
+          </Text>
         </VStack>
       </Box>
     </Box>
