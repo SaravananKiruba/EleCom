@@ -29,14 +29,13 @@ const ROLE_COLORS: Record<string, string> = {
 
 export function PublicHeader() {
   const { state } = useAppState();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isArchitect } = useAuth();
   const router = useRouter();
   const cartCount = state.cartItems.reduce((sum, i) => sum + i.quantity, 0);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    logout();
-    router.push('/');
+    logout().then(() => router.push('/'));
   };
 
   return (
@@ -121,7 +120,12 @@ export function PublicHeader() {
                     <Button size="sm" colorPalette="blue" variant="outline">Dashboard</Button>
                   </Link>
                 )}
-                {!isAdmin && (
+                {isArchitect && (
+                  <Link href="/architect-portal" style={{ textDecoration: 'none' }}>
+                    <Button size="sm" colorPalette="green" variant="outline">My Portal</Button>
+                  </Link>
+                )}
+                {!isAdmin && !isArchitect && (
                   <Link href="/dashboard" style={{ textDecoration: 'none' }}>
                     <Button variant="outline" size="sm" colorPalette="blue">My Account</Button>
                   </Link>

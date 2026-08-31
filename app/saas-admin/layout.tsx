@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 const NAV = [
   { href: '/saas-admin', label: 'Dashboard', icon: 'D' },
   { href: '/saas-admin/tenants', label: 'Tenants', icon: 'T' },
+  { href: '/saas-admin/subscriptions', label: 'Subscriptions', icon: '$' },
 ];
 
 export default function SaasAdminLayout({ children }: { children: React.ReactNode }) {

@@ -16,6 +16,7 @@ import { SidePanel } from '@/components/ui/SidePanel';
 import { products, brands } from '@/data/mockData';
 import { Quote, QuoteStatus, PurchaseOrder } from '@/types';
 import { toaster } from '@/components/ui/toaster';
+import { downloadCSV } from '@/utils/csvExport';
 
 const PAGE_SIZE = 10;
 const STATUSES: QuoteStatus[] = ['Draft', 'Shared', 'Follow-Up', 'Negotiation', 'Accepted', 'Rejected', 'Expired', 'Converted to SO'];
@@ -93,9 +94,39 @@ export default function AdminQuotationsPage() {
     setLostOpen(false);
   };
 
+  const createRevision = () => {
+    if (!selected) return;
+    const q = selected;
+    // Version suffix: Q-001 → Q-001-R2, Q-001-R2 → Q-001-R3
+    const base = q.quoteNumber.replace(/-R\d+$/, '');
+    const revNums = state.quotes
+      .filter(x => x.quoteNumber.startsWith(base))
+      .map(x => { const m = x.quoteNumber.match(/-R(\d+)$/); return m ? Number(m[1]) : 1; });
+    const nextRev = Math.max(...revNums) + 1;
+    const newQuote: Quote = {
+      ...q,
+      id: `q-rev-${Date.now()}`,
+      quoteNumber: `${base}-R${nextRev}`,
+      status: 'Draft',
+      createdAt: new Date().toISOString(),
+      sharedAt: undefined,
+      approvedAt: undefined,
+    };
+    dispatch({ type: 'ADD_QUOTE', payload: newQuote });
+    toaster.create({ title: `Revision ${newQuote.quoteNumber} created`, type: 'success', duration: 2500 });
+    setSelected(newQuote);
+  };
+
   return (
     <Box p={{ base: 4, md: 6 }}>
-      <PageHeader title="Quotations" subtitle={`${state.quotes.length} total quotes`} />
+      <PageHeader title="Quotations" subtitle={`${state.quotes.length} total quotes`}
+        actions={
+          <Button size="sm" variant="outline" colorPalette="green"
+            onClick={() => downloadCSV(filtered.map(q => ({ Quote: q.quoteNumber, Customer: q.customerName, Project: q.projectName, Status: q.status, Total: grandTotal(q).toFixed(2), Date: q.createdAt })), 'quotations.csv')}>
+            ↓ Export CSV
+          </Button>
+        }
+      />
 
       <Flex gap={3} mb={5} flexWrap="wrap">
         <Box flex={{ base: '1 1 100%', md: 1 }} minW={0}>
@@ -164,6 +195,10 @@ export default function AdminQuotationsPage() {
             <HStack gap={2} flexWrap="wrap">
               <Text fontWeight={800} fontFamily="mono" fontSize="sm" color="green.700">{selected.quoteNumber}</Text>
               <StatusBadge status={selected.status} />
+              <Button size="xs" variant="outline" colorPalette="gray"
+                onClick={() => window.open(`/admin/quotations/${selected.id}/print`, '_blank')}>
+                🖨 PDF
+              </Button>
             </HStack>
           )
         }
@@ -212,12 +247,15 @@ export default function AdminQuotationsPage() {
                 )}
                 {['Shared', 'Follow-Up', 'Negotiation'].includes(selected.status) && (
                   <VStack gap={2} align="stretch">
-                    <Button colorPalette="blue" variant="ghost" size="sm" onClick={() => setWhatsappOpen(true)}>💬 Resend via WhatsApp</Button>
                     <HStack gap={2}>
                       <Button colorPalette="green" flex={1} rounded="xl" onClick={markWon}>🏆 Won — Create SO</Button>
                       <Button colorPalette="red" variant="outline" flex={1} rounded="xl" onClick={() => setLostOpen(true)}>✗ Mark Lost</Button>
                     </HStack>
+                    <Button variant="outline" colorPalette="purple" size="sm" onClick={createRevision}>📋 Create Revision</Button>
                   </VStack>
+                )}
+                {['Draft', 'Expired'].includes(selected.status) && (
+                  <Button variant="outline" colorPalette="purple" size="sm" onClick={createRevision}>📋 Create Revision</Button>
                 )}
                 {selected.status === 'Accepted' && (
                   <Box p={3} bg="green.50" rounded="xl" border="1px solid" borderColor="green.200">

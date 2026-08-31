@@ -16,6 +16,7 @@ import { SidePanel } from '@/components/ui/SidePanel';
 import { products, brands } from '@/data/mockData';
 import { RFQ, RFQStatus, Quote } from '@/types';
 import { toaster } from '@/components/ui/toaster';
+import { downloadCSV } from '@/utils/csvExport';
 
 const STATUSES: RFQStatus[] = ['New', 'Under Review', 'Quote Ready', 'Follow-Up', 'Accepted', 'Rejected', 'Expired'];
 const PAGE_SIZE = 10;
@@ -99,7 +100,14 @@ export default function AdminRFQsPage() {
 
   return (
     <Box p={{ base: 4, md: 6 }}>
-      <PageHeader title="RFQ Management" subtitle={`${state.rfqs.length} total requests`} />
+      <PageHeader title="RFQ Management" subtitle={`${state.rfqs.length} total requests`}
+        actions={
+          <Button size="sm" variant="outline" colorPalette="green"
+            onClick={() => downloadCSV(filtered.map(r => ({ RFQ: r.rfqNumber, Customer: r.customerName, Company: r.companyName, Project: r.projectName, Status: r.status, Date: r.createdAt })), 'rfqs.csv')}>
+            ↓ Export CSV
+          </Button>
+        }
+      />
 
       {/* Filters */}
       <Flex gap={3} mb={5} flexWrap="wrap">

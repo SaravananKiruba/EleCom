@@ -20,6 +20,7 @@ const PAGE_SIZE = 20;
 interface Brand { id: string; name: string; slug: string; }
 interface Category { id: string; name: string; slug: string; children?: Category[]; }
 interface Spec { specKey: string; specValue: string; unit?: string; sortOrder?: number; }
+interface Variant { id?: string; sku: string; name: string; price: string; stockQuantity: string; }
 interface Product {
   id: string; name: string; sku: string; slug: string;
   shortDescription?: string; description?: string; imageUrl?: string;
@@ -33,6 +34,7 @@ const EMPTY_FORM = {
   shortDescription: '', description: '', imageUrl: '',
   basePrice: '', status: 'ACTIVE', isFeatured: false,
   specs: [{ specKey: '', specValue: '', unit: '' }] as { specKey: string; specValue: string; unit: string }[],
+  variants: [] as Variant[],
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -107,8 +109,20 @@ export default function AdminProductsPage() {
     setFormOpen(true);
   };
 
-  const openEdit = (p: Product) => {
+  const openEdit = async (p: Product) => {
     setEditProduct(p);
+    // Load variants for this product
+    let loadedVariants: Variant[] = [];
+    if (tenantId) {
+      try {
+        const vdata = await fetch(`/api/products/${p.id}/variants?tenantId=${tenantId}`).then(r => r.json());
+        loadedVariants = (Array.isArray(vdata) ? vdata : []).map((v: { sku: string; name: string; price?: string | null; stockQuantity?: number | null }) => ({
+          sku: v.sku, name: v.name,
+          price: v.price != null ? String(v.price) : '',
+          stockQuantity: v.stockQuantity != null ? String(v.stockQuantity) : '',
+        }));
+      } catch {}
+    }
     setForm({
       name: p.name,
       sku: p.sku,
@@ -123,6 +137,7 @@ export default function AdminProductsPage() {
       specs: p.specifications.length
         ? p.specifications.map(s => ({ specKey: s.specKey, specValue: s.specValue, unit: s.unit ?? '' }))
         : [{ specKey: '', specValue: '', unit: '' }],
+      variants: loadedVariants,
     });
     setFormOpen(true);
   };
@@ -169,6 +184,24 @@ export default function AdminProductsPage() {
         throw new Error(err.error ?? 'Save failed');
       }
       toaster.create({ title: editProduct ? 'Product updated' : 'Product created', type: 'success', duration: 2000 });
+
+      // Save variants if any are defined
+      const savedProduct = await res.json();
+      if (form.variants.length > 0) {
+        const vPayload = form.variants.filter(v => v.sku.trim() && v.name.trim()).map(v => ({
+          sku: v.sku.trim(), name: v.name.trim(),
+          price: v.price ? parseFloat(v.price) : null,
+          stockQuantity: v.stockQuantity ? parseInt(v.stockQuantity) : null,
+        }));
+        if (vPayload.length > 0) {
+          await fetch(`/api/products/${editProduct?.id ?? savedProduct.id}/variants`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenantId, variants: vPayload }),
+          });
+        }
+      }
+
       setFormOpen(false);
       fetchProducts();
     } catch (err) {
@@ -455,6 +488,35 @@ export default function AdminProductsPage() {
                     </HStack>
                   ))}
                 </VStack>
+              </Box>
+
+              {/* Variants & Stock */}
+              <Box>
+                <Flex align="center" justify="space-between" mb={3}>
+                  <Text fontSize="sm" fontWeight={700} color="gray.700">Variants & Stock</Text>
+                  <Button size="xs" variant="ghost" colorPalette="blue" onClick={() => setForm(f => ({ ...f, variants: [...f.variants, { sku: '', name: '', price: '', stockQuantity: '' }] }))}>
+                    + Add Variant
+                  </Button>
+                </Flex>
+                <Box mb={1}>
+                  <HStack gap={2} mb={1}>
+                    {['SKU', 'Variant Name', 'Price (₹)', 'Stock Qty', ''].map(h => (
+                      <Text key={h} fontSize="10px" fontWeight={700} color="gray.500" textTransform="uppercase" flex={h === '' ? 0 : 1} w={h === '' ? '28px' : undefined}>{h}</Text>
+                    ))}
+                  </HStack>
+                  <VStack gap={2} align="stretch">
+                    {form.variants.map((v, i) => (
+                      <HStack key={i} gap={2}>
+                        <Input size="sm" value={v.sku} onChange={e => setForm(f => { const variants = [...f.variants]; variants[i] = { ...variants[i], sku: e.target.value }; return { ...f, variants }; })} placeholder="VAR-001" flex={1} fontFamily="mono" />
+                        <Input size="sm" value={v.name} onChange={e => setForm(f => { const variants = [...f.variants]; variants[i] = { ...variants[i], name: e.target.value }; return { ...f, variants }; })} placeholder="e.g. Cool White 4000K" flex={1} />
+                        <Input size="sm" type="number" value={v.price} onChange={e => setForm(f => { const variants = [...f.variants]; variants[i] = { ...variants[i], price: e.target.value }; return { ...f, variants }; })} placeholder="0" flex={1} />
+                        <Input size="sm" type="number" value={v.stockQuantity} onChange={e => setForm(f => { const variants = [...f.variants]; variants[i] = { ...variants[i], stockQuantity: e.target.value }; return { ...f, variants }; })} placeholder="0" flex={1} />
+                        <Button size="xs" variant="ghost" colorPalette="red" w="28px" onClick={() => setForm(f => ({ ...f, variants: f.variants.filter((_, idx) => idx !== i) }))}>✕</Button>
+                      </HStack>
+                    ))}
+                    {form.variants.length === 0 && <Text fontSize="xs" color="gray.400">No variants — product treated as single SKU</Text>}
+                  </VStack>
+                </Box>
               </Box>
             </VStack>
           </DialogBody>

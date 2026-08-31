@@ -14,9 +14,14 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SidePanel } from '@/components/ui/SidePanel';
 import { Customer } from '@/types';
 import { toaster } from '@/components/ui/toaster';
+import { downloadCSV } from '@/utils/csvExport';
+import { ActivityTimeline } from '@/components/ui/ActivityTimeline';
+import { useAuth } from '@/context/AuthContext';
+import { downloadCSV } from '@/utils/csvExport';
 
 export default function CustomersPage() {
   const { state, dispatch } = useAppState();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Customer | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -53,7 +58,14 @@ export default function CustomersPage() {
 
   return (
     <Box p={{ base: 4, md: 6 }}>
-      <PageHeader title="Customers" subtitle={`${state.customers.length} total`} />
+      <PageHeader title="Customers" subtitle={`${state.customers.length} total`}
+        actions={
+          <Button size="sm" variant="outline" colorPalette="green"
+            onClick={() => downloadCSV(filtered.map(c => ({ Name: c.name, Company: c.companyName, Email: c.email, Mobile: c.mobile, City: c.city, GST: c.gst, Status: c.status })), 'customers.csv')}>
+            ↓ Export CSV
+          </Button>
+        }
+      />
 
       <Box mb={5} maxW="400px">
         <SearchInput value={search} onChange={setSearch} placeholder="Search by name, company, city..." />
@@ -130,6 +142,12 @@ export default function CustomersPage() {
                 </Flex>
               ))}
             </Box>
+            {user.tenantId && (
+              <>
+                <Separator />
+                <ActivityTimeline customerId={selected.id} />
+              </>
+            )}
             <Separator />
             <Button colorPalette={selected.status === 'Active' ? 'red' : 'green'} variant="outline" rounded="xl" onClick={() => { toggleStatus(selected); setDetailOpen(false); }}>
               {selected.status === 'Active' ? 'Deactivate Customer' : 'Activate Customer'}

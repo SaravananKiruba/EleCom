@@ -4,11 +4,12 @@ import {
   Box, Text, Button, HStack, VStack, Flex, SimpleGrid, Separator,
   TabsRoot, TabsList, TabsTrigger, TabsContent,
 } from '@chakra-ui/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAppState } from '@/context/AppContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { KPICard } from '@/components/ui/KPICard';
 import { products, brands, categories } from '@/data/mockData';
+import { downloadCSV } from '@/utils/csvExport';
 
 function BarChart({ data, color = '#4299e1' }: { data: { label: string; value: number }[]; color?: string }) {
   const max = Math.max(...data.map(d => d.value), 1);
@@ -34,7 +35,11 @@ export default function ReportsPage() {
   const [dateFrom, setDateFrom] = useState('2026-01-01');
   const [dateTo, setDateTo] = useState('2026-12-31');
 
-  const { rfqs, quotes, customers, purchaseOrders } = state;
+  const { rfqs: allRfqs, quotes: allQuotes, customers, purchaseOrders } = state;
+
+  // Filter by date range
+  const rfqs = useMemo(() => allRfqs.filter(r => r.createdAt >= dateFrom && r.createdAt <= dateTo + 'T23:59:59'), [allRfqs, dateFrom, dateTo]);
+  const quotes = useMemo(() => allQuotes.filter(q => q.createdAt >= dateFrom && q.createdAt <= dateTo + 'T23:59:59'), [allQuotes, dateFrom, dateTo]);
 
   // Stats
   const wonCount = quotes.filter(q => q.status === 'Accepted').length;
@@ -97,7 +102,14 @@ export default function ReportsPage() {
 
   return (
     <Box p={{ base: 4, md: 6 }}>
-      <PageHeader title="Reports" subtitle="Business intelligence and analytics" />
+      <PageHeader title="Reports" subtitle="Business intelligence and analytics"
+        actions={
+          <Button size="sm" variant="outline" colorPalette="green"
+            onClick={() => downloadCSV(quotes.map(q => ({ Quote: q.quoteNumber, Customer: q.customerName, Project: q.projectName, Status: q.status, Value: quoteValue(q).toFixed(2), Date: q.createdAt })), 'quotes-report.csv')}>
+            ↓ Export CSV
+          </Button>
+        }
+      />
 
       {/* Date Filter */}
       <Flex gap={3} mb={6} flexWrap="wrap" align="center">

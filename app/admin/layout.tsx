@@ -21,10 +21,12 @@ const NAV_ITEMS = [
   { href: '/admin/products', label: 'Products', icon: 'P' },
   { href: '/admin/purchase-orders', label: 'Sales Orders', icon: 'S' },
   { href: '/admin/reports', label: 'Reports', icon: 'Rp' },
+  { href: '/admin/team', label: 'Team', icon: 'Tm' },
+  { href: '/admin/audit', label: 'Audit Log', icon: 'Au' },
   { href: '/admin/settings', label: 'Store Settings', icon: 'St' },
 ];
 
-function SidebarContent({ pathname, onClose }: { pathname: string; onClose?: () => void }) {
+function SidebarContent({ pathname, onClose, onLogout }: { pathname: string; onClose?: () => void; onLogout?: () => void }) {
   const { state } = useAppState();
   const pendingRFQs = state.rfqs.filter(r => r.status === 'New').length;
   const dueFollowUps = state.followUps.filter(f => f.status === 'Scheduled' && f.nextFollowUp <= '2026-08-22').length;
@@ -82,6 +84,13 @@ function SidebarContent({ pathname, onClose }: { pathname: string; onClose?: () 
             <Text fontSize="sm" fontWeight={500} color="gray.600">Public Portal</Text>
           </Flex>
         </Link>
+        <Flex
+          align="center" gap={3} px={3} py={2.5} rounded="lg"
+          _hover={{ bg: 'red.50' }} cursor="pointer" onClick={onLogout}
+        >
+          <Text fontSize="md">↩</Text>
+          <Text fontSize="sm" fontWeight={500} color="red.500">Logout</Text>
+        </Flex>
       </Box>
     </Box>
   );
@@ -90,17 +99,19 @@ function SidebarContent({ pathname, onClose }: { pathname: string; onClose?: () 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    // Frontend route guard — real auth must be enforced server-side
-    if (user.role !== 'TENANT_ADMIN' && user.role !== 'SALES' && user.role !== 'SAAS_ADMIN') {
+    // Client-side guard (middleware handles server-side)
+    if (!loading && user.role !== 'TENANT_ADMIN' && user.role !== 'SALES' && user.role !== 'SAAS_ADMIN') {
       router.replace('/login');
     }
-  }, [user.role, router]);
+  }, [user.role, loading, router]);
 
-  if (user.role !== 'TENANT_ADMIN' && user.role !== 'SALES' && user.role !== 'SAAS_ADMIN') return null;
+  if (loading || (user.role !== 'TENANT_ADMIN' && user.role !== 'SALES' && user.role !== 'SAAS_ADMIN')) return null;
+
+  const handleLogout = () => logout().then(() => router.replace('/login'));
 
   return (
     <Box minH="100vh" bg="gray.50">
@@ -118,7 +129,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         shadow="sm"
         zIndex={50}
       >
-        <SidebarContent pathname={pathname} />
+        <SidebarContent pathname={pathname} onLogout={handleLogout} />
       </Box>
 
       {/* Mobile Header */}
@@ -173,7 +184,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           transition: 'transform 0.26s cubic-bezier(0.4,0,0.2,1)',
         }}
       >
-        <SidebarContent pathname={pathname} onClose={() => setDrawerOpen(false)} />
+        <SidebarContent pathname={pathname} onClose={() => setDrawerOpen(false)} onLogout={handleLogout} />
       </div>
 
       <Toaster />

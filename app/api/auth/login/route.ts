@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/server/prisma';
 import * as bcrypt from 'bcryptjs';
+import * as jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET ?? 'crmboo-dev-secret-change-in-production';
+const COOKIE = 'crmboo_token';
 
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
@@ -33,7 +37,6 @@ export async function POST(req: NextRequest) {
 
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
-  // Determine redirect based on role
   const redirectMap: Record<string, string> = {
     SAAS_ADMIN: '/saas-admin',
     TENANT_ADMIN: '/admin',
@@ -42,14 +45,25 @@ export async function POST(req: NextRequest) {
     ARCHITECT: '/catalogue',
   };
 
-  return NextResponse.json({
+  const payload = {
     id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
-    tenantId: user.tenantId,
-    tenantName: user.tenant?.name,
-    tenantSlug: user.tenant?.slug,
-    redirect: redirectMap[user.role] ?? '/',
+    tenantId: user.tenantId ?? undefined,
+    tenantName: user.tenant?.name ?? undefined,
+    tenantSlug: user.tenant?.slug ?? undefined,
+  };
+
+  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
+  const res = NextResponse.json({ ...payload, redirect: redirectMap[user.role] ?? '/' });
+  res.cookies.set(COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+    path: '/',
   });
+  return res;
 }

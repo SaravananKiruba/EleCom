@@ -171,6 +171,30 @@ export default function AdminSettingsPage() {
           )}
         </Box>
       </SimpleGrid>
+
+      {/* Tax Settings */}
+      <Box bg="white" rounded="xl" border="1px solid" borderColor="gray.100" p={6} mt={6}>
+        <Text fontWeight={700} fontSize="md" color="gray.800" mb={1}>GST / Tax Configuration</Text>
+        <Text fontSize="sm" color="gray.500" mb={5}>Default tax rates applied on quote line items. Sales team can override per line.</Text>
+        <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
+          {[
+            { label: 'Exempt (0%)', value: 0, desc: 'Lighting fixtures — residential (select regions)' },
+            { label: 'GST 5%', value: 5, desc: 'LED lights, bulbs, solar lanterns' },
+            { label: 'GST 12%', value: 12, desc: 'Electrical fittings, switches, LEDs' },
+            { label: 'GST 18%', value: 18, desc: 'Industrial lighting, control gear' },
+          ].map(t => (
+            <Box key={t.value} rounded="xl" border="2px solid" borderColor="gray.200" p={4} cursor="pointer"
+              _hover={{ borderColor: 'blue.300', bg: 'blue.50' }} transition="all 0.15s">
+              <Text fontWeight={700} fontSize="lg" color="gray.900" mb={1}>{t.value}%</Text>
+              <Text fontSize="sm" fontWeight={600} color="gray.700" mb={1}>{t.label}</Text>
+              <Text fontSize="xs" color="gray.400">{t.desc}</Text>
+            </Box>
+          ))}
+        </SimpleGrid>
+        <Box bg="yellow.50" rounded="lg" p={4} mt={4} border="1px solid" borderColor="yellow.200">
+          <Text fontSize="xs" color="yellow.800" fontWeight={600}>Note: Full per-product GST HSN code mapping is on the roadmap. Currently configure default rate on each quote line item.</Text>
+        </Box>
+      </Box>
     </Box>
   );
 }
