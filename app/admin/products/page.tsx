@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SidePanel } from '@/components/ui/SidePanel';
 import { toaster } from '@/components/ui/toaster';
 
 const PAGE_SIZE = 20;
@@ -71,6 +72,15 @@ export default function AdminProductsPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Inline add-new state for brand / category
+  const [addingBrand, setAddingBrand] = useState(false);
+  const [newBrandName, setNewBrandName] = useState('');
+  const [savingBrand, setSavingBrand] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryParentId, setNewCategoryParentId] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -238,6 +248,55 @@ export default function AdminProductsPage() {
     fetchProducts();
   };
 
+  const saveNewBrand = async () => {
+    if (!tenantId || !newBrandName.trim()) return;
+    setSavingBrand(true);
+    try {
+      const res = await fetch('/api/brands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, name: newBrandName.trim() }),
+      });
+      const b: Brand = await res.json();
+      if (!res.ok) throw new Error((b as unknown as { error?: string }).error ?? 'Failed');
+      setBrands(prev => (prev.some(x => x.id === b.id) ? prev : [...prev, b].sort((a, c) => a.name.localeCompare(c.name))));
+      setForm(f => ({ ...f, brandId: b.id }));
+      setNewBrandName('');
+      setAddingBrand(false);
+      toaster.create({ title: `Brand "${b.name}" added`, type: 'success', duration: 2000 });
+    } catch (err) {
+      toaster.create({ title: (err as Error).message, type: 'error', duration: 3000 });
+    } finally {
+      setSavingBrand(false);
+    }
+  };
+
+  const saveNewCategory = async () => {
+    if (!tenantId || !newCategoryName.trim()) return;
+    setSavingCategory(true);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, name: newCategoryName.trim(), parentId: newCategoryParentId || null }),
+      });
+      const c: Category & { parentId?: string | null } = await res.json();
+      if (!res.ok) throw new Error((c as unknown as { error?: string }).error ?? 'Failed');
+      // Refresh categories tree so parent/child grouping stays correct
+      const refreshed = await fetch(`/api/categories?tenantId=${tenantId}`).then(r => r.json());
+      setCategories(refreshed);
+      setForm(f => ({ ...f, categoryId: c.id }));
+      setNewCategoryName('');
+      setNewCategoryParentId('');
+      setAddingCategory(false);
+      toaster.create({ title: `Category "${c.name}" added`, type: 'success', duration: 2000 });
+    } catch (err) {
+      toaster.create({ title: (err as Error).message, type: 'error', duration: 3000 });
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -246,9 +305,7 @@ export default function AdminProductsPage() {
     setImportResult(null);
     // Row count estimate from file size (rough preview — actual count confirmed after import)
     setImportRows(0);
-  };
-
-  const handleImport = async () => {
+  };  const handleImport = async () => {
     if (!tenantId || !importFile) return;
     setImporting(true);
     setImportResult(null);
@@ -375,16 +432,14 @@ export default function AdminProductsPage() {
 
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
-      {/* Add / Edit Dialog */}
-      <DialogRoot open={formOpen} onOpenChange={d => setFormOpen(d.open)} size="xl">
-        <DialogBackdrop />
-        <DialogContent maxW={{ base: '95vw', md: '720px' }} mx="auto">
-          <DialogHeader>
-            <Text fontWeight={700}>{editProduct ? 'Edit Product' : 'Add Product'}</Text>
-            <DialogCloseTrigger />
-          </DialogHeader>
-          <DialogBody>
-            <VStack gap={5} align="stretch">
+      {/* Add / Edit — right-side panel */}
+      <SidePanel
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        width="min(720px, 100vw)"
+        title={<Text fontWeight={700}>{editProduct ? 'Edit Product' : 'Add Product'}</Text>}
+      >
+        <VStack gap={5} align="stretch">
               <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                 <Field.Root required>
                   <Field.Label fontSize="sm" fontWeight={600}>Product Name <Text as="span" color="red.500">*</Text></Field.Label>
@@ -395,25 +450,59 @@ export default function AdminProductsPage() {
                   <Input value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} placeholder="e.g. CVS-PNL-36W" fontFamily="mono" />
                 </Field.Root>
                 <Field.Root>
-                  <Field.Label fontSize="sm" fontWeight={600}>Brand</Field.Label>
-                  <select value={form.brandId} onChange={e => setForm(f => ({ ...f, brandId: e.target.value }))}
-                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '14px', color: '#374151', width: '100%' }}>
-                    <option value="">— No Brand —</option>
-                    {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
+                  <Flex align="center" justify="space-between" mb={1}>
+                    <Field.Label fontSize="sm" fontWeight={600} m={0}>Brand</Field.Label>
+                    <Button size="xs" variant="ghost" colorPalette="blue" onClick={() => setAddingBrand(v => !v)}>
+                      {addingBrand ? 'Cancel' : '+ New brand'}
+                    </Button>
+                  </Flex>
+                  {addingBrand ? (
+                    <HStack gap={2}>
+                      <Input size="sm" autoFocus value={newBrandName} onChange={e => setNewBrandName(e.target.value)} placeholder="e.g. Philips"
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveNewBrand(); } }} />
+                      <Button size="sm" colorPalette="blue" onClick={saveNewBrand} loading={savingBrand} disabled={!newBrandName.trim()}>Save</Button>
+                    </HStack>
+                  ) : (
+                    <select value={form.brandId} onChange={e => setForm(f => ({ ...f, brandId: e.target.value }))}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '14px', color: '#374151', width: '100%' }}>
+                      <option value="">— No Brand —</option>
+                      {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                  )}
                 </Field.Root>
                 <Field.Root>
-                  <Field.Label fontSize="sm" fontWeight={600}>Category</Field.Label>
-                  <select value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
-                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '14px', color: '#374151', width: '100%' }}>
-                    <option value="">— No Category —</option>
-                    {categories.map(c => (
-                      <optgroup key={c.id} label={c.name}>
-                        <option value={c.id}>{c.name}</option>
-                        {c.children?.map(sub => <option key={sub.id} value={sub.id}>  └ {sub.name}</option>)}
-                      </optgroup>
-                    ))}
-                  </select>
+                  <Flex align="center" justify="space-between" mb={1}>
+                    <Field.Label fontSize="sm" fontWeight={600} m={0}>Category</Field.Label>
+                    <Button size="xs" variant="ghost" colorPalette="blue" onClick={() => setAddingCategory(v => !v)}>
+                      {addingCategory ? 'Cancel' : '+ New category'}
+                    </Button>
+                  </Flex>
+                  {addingCategory ? (
+                    <VStack align="stretch" gap={2}>
+                      <select value={newCategoryParentId} onChange={e => setNewCategoryParentId(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '14px', color: '#374151', width: '100%' }}>
+                        <option value="">Top-level category</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>Sub-category of: {c.name}</option>)}
+                      </select>
+                      <HStack gap={2}>
+                        <Input size="sm" autoFocus value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)}
+                          placeholder={newCategoryParentId ? 'Sub-category name' : 'Category name'}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveNewCategory(); } }} />
+                        <Button size="sm" colorPalette="blue" onClick={saveNewCategory} loading={savingCategory} disabled={!newCategoryName.trim()}>Save</Button>
+                      </HStack>
+                    </VStack>
+                  ) : (
+                    <select value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '14px', color: '#374151', width: '100%' }}>
+                      <option value="">— No Category —</option>
+                      {categories.map(c => (
+                        <optgroup key={c.id} label={c.name}>
+                          <option value={c.id}>{c.name}</option>
+                          {c.children?.map(sub => <option key={sub.id} value={sub.id}>  └ {sub.name}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  )}
                 </Field.Root>
                 <Field.Root>
                   <Field.Label fontSize="sm" fontWeight={600}>Base Price (₹)</Field.Label>
@@ -506,16 +595,15 @@ export default function AdminProductsPage() {
                   </VStack>
                 </Box>
               </Box>
+
+              <HStack gap={3} justify="flex-end" pt={2}>
+                <Button variant="ghost" onClick={() => setFormOpen(false)}>Cancel</Button>
+                <Button colorPalette="blue" onClick={handleSave} loading={saving}>
+                  {editProduct ? 'Save Changes' : 'Create Product'}
+                </Button>
+              </HStack>
             </VStack>
-          </DialogBody>
-          <DialogFooter gap={3}>
-            <Button variant="ghost" onClick={() => setFormOpen(false)}>Cancel</Button>
-            <Button colorPalette="blue" onClick={handleSave} loading={saving}>
-              {editProduct ? 'Save Changes' : 'Create Product'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
+      </SidePanel>
 
       {/* Delete Confirm Dialog */}
       <DialogRoot open={!!deleteTarget} onOpenChange={d => { if (!d.open) setDeleteTarget(null); }}>
@@ -534,13 +622,14 @@ export default function AdminProductsPage() {
         </DialogContent>
       </DialogRoot>
 
-      {/* Bulk Import Dialog */}
-      <DialogRoot open={importOpen} onOpenChange={d => setImportOpen(d.open)} size="xl">
-        <DialogBackdrop />
-        <DialogContent maxW={{ base: '95vw', md: '680px' }} mx="auto">
-          <DialogHeader><Text fontWeight={700}>Bulk Import Products</Text><DialogCloseTrigger /></DialogHeader>
-          <DialogBody>
-            <VStack gap={5} align="stretch">
+      {/* Bulk Import — right-side panel */}
+      <SidePanel
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        width="min(680px, 100vw)"
+        title={<Text fontWeight={700}>Bulk Import Products</Text>}
+      >
+        <VStack gap={5} align="stretch">
               <Box bg="blue.50" rounded="lg" p={4}>
                 <Text fontSize="sm" fontWeight={600} color="blue.800" mb={2}>Required Excel columns:</Text>
                 <Text fontSize="xs" fontFamily="mono" color="blue.700" lineHeight={1.8}>
@@ -587,16 +676,15 @@ export default function AdminProductsPage() {
                   )}
                 </Box>
               )}
+
+              <HStack gap={3} justify="flex-end" pt={2}>
+                <Button variant="ghost" onClick={() => setImportOpen(false)}>Close</Button>
+                <Button colorPalette="green" onClick={handleImport} loading={importing} disabled={!importFile}>
+                  {importFile ? `Upload & Import` : 'Select a file first'}
+                </Button>
+              </HStack>
             </VStack>
-          </DialogBody>
-          <DialogFooter gap={3}>
-            <Button variant="ghost" onClick={() => setImportOpen(false)}>Close</Button>
-            <Button colorPalette="green" onClick={handleImport} loading={importing} disabled={!importFile}>
-              {importFile ? `Upload & Import` : 'Select a file first'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
+      </SidePanel>
     </Box>
   );
 }

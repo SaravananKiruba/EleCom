@@ -1,13 +1,13 @@
 'use client';
 
 import {
-  Box, Text, Button, HStack, Flex, Badge, Input, Field, VStack,
-  DialogRoot, DialogBackdrop, DialogContent, DialogHeader, DialogBody, DialogFooter, DialogCloseTrigger,
+  Box, Text, Button, HStack, Badge, Input, Field, VStack,
 } from '@chakra-ui/react';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SidePanel } from '@/components/ui/SidePanel';
 import { toaster } from '@/components/ui/toaster';
 
 interface TeamUser {
@@ -128,41 +128,39 @@ export default function AdminTeamPage() {
         </Box>
       )}
 
-      {/* Add Member Dialog */}
-      <DialogRoot open={inviteOpen} onOpenChange={d => setInviteOpen(d.open)}>
-        <DialogBackdrop />
-        <DialogContent maxW={{ base: '95vw', md: '440px' }} mx="auto">
-          <DialogHeader><Text fontWeight={700}>Add Team Member</Text><DialogCloseTrigger /></DialogHeader>
-          <DialogBody>
-            <VStack gap={4} align="stretch">
-              <Field.Root>
-                <Field.Label fontSize="sm" fontWeight={600}>Full Name</Field.Label>
-                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ravi Kumar" />
-              </Field.Root>
-              <Field.Root>
-                <Field.Label fontSize="sm" fontWeight={600}>Email</Field.Label>
-                <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ravi@company.com" />
-              </Field.Root>
-              <Field.Root>
-                <Field.Label fontSize="sm" fontWeight={600}>Temporary Password</Field.Label>
-                <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Min 8 characters" />
-              </Field.Root>
-              <Field.Root>
-                <Field.Label fontSize="sm" fontWeight={600}>Role</Field.Label>
-                <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '14px', color: '#374151', width: '100%' }}>
-                  <option value="SALES">Sales</option>
-                  <option value="TENANT_ADMIN">Admin</option>
-                </select>
-              </Field.Root>
-            </VStack>
-          </DialogBody>
-          <DialogFooter gap={3}>
+      {/* Add Member — right-side panel */}
+      <SidePanel
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        title={<Text fontWeight={700}>Add Team Member</Text>}
+      >
+        <VStack gap={4} align="stretch">
+          <Field.Root>
+            <Field.Label fontSize="sm" fontWeight={600}>Full Name</Field.Label>
+            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ravi Kumar" />
+          </Field.Root>
+          <Field.Root>
+            <Field.Label fontSize="sm" fontWeight={600}>Email</Field.Label>
+            <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ravi@company.com" />
+          </Field.Root>
+          <Field.Root>
+            <Field.Label fontSize="sm" fontWeight={600}>Temporary Password</Field.Label>
+            <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Min 8 characters" />
+          </Field.Root>
+          <Field.Root>
+            <Field.Label fontSize="sm" fontWeight={600}>Role</Field.Label>
+            <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '14px', color: '#374151', width: '100%' }}>
+              <option value="SALES">Sales</option>
+              <option value="TENANT_ADMIN">Admin</option>
+            </select>
+          </Field.Root>
+          <HStack gap={3} justify="flex-end" pt={2}>
             <Button variant="ghost" onClick={() => setInviteOpen(false)}>Cancel</Button>
             <Button colorPalette="blue" onClick={handleInvite} loading={saving}>Add Member</Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
+          </HStack>
+        </VStack>
+      </SidePanel>
     </Box>
   );
 }

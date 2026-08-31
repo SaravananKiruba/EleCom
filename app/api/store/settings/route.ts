@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/server/prisma';
+import { requireTenant, isResponse } from '@/src/server/auth';
 
-// POST /api/store/settings — upsert tenant store settings
 export async function POST(req: NextRequest) {
-  const { tenantId, tagline, primaryColor, bannerText } = await req.json();
-  if (!tenantId) return NextResponse.json({ error: 'tenantId required' }, { status: 400 });
+  const auth = requireTenant(req);
+  if (isResponse(auth)) return auth;
+  if (auth.role !== 'TENANT_ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { tagline, primaryColor, bannerText } = await req.json();
+  const tenantId = auth.tenantId!;
 
   const upsert = async (key: string, value: string | undefined) => {
     if (value === undefined) return;

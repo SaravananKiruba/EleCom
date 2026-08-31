@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/server/prisma';
 import * as bcrypt from 'bcryptjs';
-import * as jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET ?? 'crmboo-dev-secret-change-in-production';
-const COOKIE = 'crmboo_token';
+import { AUTH_COOKIE, signToken, AuthUser } from '@/src/server/auth';
 
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
@@ -35,6 +32,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Your company account is not active. Contact support.' }, { status: 403 });
   }
 
+  // Resolve linked CRM record so downstream APIs can scope by them.
+  let customerId: string | undefined;
+  let architectId: string | undefined;
+  if (user.role === 'CUSTOMER' && user.tenantId && user.email) {
+    const c = await prisma.customer.findFirst({
+      where: { tenantId: user.tenantId, email: user.email },
+      select: { id: true },
+    });
+    customerId = c?.id;
+  }
+  if (user.role === 'ARCHITECT' && user.tenantId && user.email) {
+    const a = await prisma.architect.findFirst({
+      where: { tenantId: user.tenantId, email: user.email },
+      select: { id: true },
+    });
+    architectId = a?.id;
+  }
+
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
   const redirectMap: Record<string, string> = {
@@ -42,10 +57,10 @@ export async function POST(req: NextRequest) {
     TENANT_ADMIN: '/admin',
     SALES: '/admin',
     CUSTOMER: '/dashboard',
-    ARCHITECT: '/catalogue',
+    ARCHITECT: '/architect-portal',
   };
 
-  const payload = {
+  const payload: AuthUser = {
     id: user.id,
     name: user.name,
     email: user.email,
@@ -53,16 +68,18 @@ export async function POST(req: NextRequest) {
     tenantId: user.tenantId ?? undefined,
     tenantName: user.tenant?.name ?? undefined,
     tenantSlug: user.tenant?.slug ?? undefined,
+    customerId,
+    architectId,
   };
 
-  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  const token = signToken(payload);
 
   const res = NextResponse.json({ ...payload, redirect: redirectMap[user.role] ?? '/' });
-  res.cookies.set(COOKIE, token, {
+  res.cookies.set(AUTH_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7,
     path: '/',
   });
   return res;

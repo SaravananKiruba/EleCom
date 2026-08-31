@@ -1,19 +1,31 @@
-export type TenantStatus = 'active' | 'pending_approval' | 'suspended' | 'rejected';
+// UI-facing types aligned to Prisma enum string values (UPPER_SNAKE_CASE).
+// Use `formatEnum(status)` from '@/utils/format' to display them.
+
+export type TenantStatus = 'PENDING_APPROVAL' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED' | 'CANCELLED';
 
 export interface Tenant {
   id: string;
   name: string;
   slug: string;
-  companyEmail: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  country: string;
-  gst: string;
-  adminName: string;
-  adminEmail: string;
+  legalName?: string;
+  email: string;
+  phone?: string;
+  gstNumber?: string;
+  industry?: string;
   status: TenantStatus;
+  createdAt: string;
+}
+
+export type UserRole = 'SAAS_ADMIN' | 'TENANT_ADMIN' | 'SALES' | 'CUSTOMER' | 'ARCHITECT';
+
+export interface UserRecord {
+  id: string;
+  tenantId?: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  lastLoginAt?: string;
   createdAt: string;
 }
 
@@ -21,64 +33,72 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
-  icon: string;
-  description: string;
-  subcategories: Subcategory[];
-}
-
-export interface Subcategory {
-  id: string;
-  name: string;
-  slug: string;
-  categoryId: string;
+  description?: string;
+  parentId?: string | null;
 }
 
 export interface Brand {
   id: string;
   name: string;
   slug: string;
-  logo: string;
-  country: string;
+  logoUrl?: string | null;
 }
 
 export interface ProductSpec {
-  label: string;
-  value: string;
+  specKey: string;
+  specValue: string;
+  unit?: string | null;
+}
+
+export interface ProductVariant {
+  id: string;
+  sku: string;
+  name: string;
+  price?: string | number | null;
+  stockQuantity?: number | null;
 }
 
 export interface Product {
   id: string;
   tenantId: string;
-  name: string;
   sku: string;
   slug: string;
-  brandId: string;
-  categoryId: string;
-  subcategoryId: string;
-  description: string;
-  shortSpec: string;
-  specifications: ProductSpec[];
-  features: string[];
-  tags: string[];
-  imageUrl: string;
-  images: string[];
-  isActive: boolean;
-  variants: string[];
-  documents: { label: string; type: string }[];
+  name: string;
+  shortDescription?: string | null;
+  description?: string | null;
+  status: 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  basePrice?: string | number | null;
+  currency?: string;
+  imageUrl?: string | null;
+  isFeatured?: boolean;
+  brand?: Brand | null;
+  category?: Category | null;
+  specifications?: ProductSpec[];
+  variants?: ProductVariant[];
 }
 
 export type RFQStatus =
-  | 'New'
-  | 'Under Review'
-  | 'Quote Ready'
-  | 'Follow-Up'
-  | 'Accepted'
-  | 'Rejected'
-  | 'Expired';
+  | 'NEW'
+  | 'UNDER_REVIEW'
+  | 'QUOTE_READY'
+  | 'FOLLOW_UP'
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'EXPIRED';
+
+export type RFQSource = 'WEBSITE' | 'MANUAL' | 'PHONE' | 'EMAIL' | 'WHATSAPP' | 'OTHER';
 
 export interface RFQItem {
-  productId: string;
-  quantity: number;
+  id?: string;
+  productId?: string | null;
+  productVariantId?: string | null;
+  productNameSnapshot?: string | null;
+  skuSnapshot?: string | null;
+  description?: string | null;
+  quantity: number | string;
+  unit?: string | null;
+  customerNotes?: string | null;
+  product?: Product | null;
 }
 
 export interface RFQ {
@@ -86,162 +106,203 @@ export interface RFQ {
   tenantId: string;
   rfqNumber: string;
   customerId: string;
-  customerName: string;
-  companyName: string;
-  mobile: string;
-  whatsapp: string;
-  email: string;
-  projectName: string;
-  deliveryLocation: string;
-  requiredDeliveryDate: string;
-  additionalRequirements: string;
-  remarks: string;
-  items: RFQItem[];
   status: RFQStatus;
+  source: RFQSource;
+  subject?: string | null;
+  notes?: string | null;
+  requestedDate?: string | null;
   createdAt: string;
-  assignedTo?: string;
-  timeline: TimelineEntry[];
-}
-
-export interface TimelineEntry {
-  date: string;
-  action: string;
-  by: string;
-  note?: string;
+  customer?: { id: string; companyName: string; contactPerson?: string | null; email?: string | null; phone?: string | null };
+  items?: RFQItem[];
 }
 
 export type QuoteStatus =
-  | 'Draft'
-  | 'Shared'
-  | 'Follow-Up'
-  | 'Negotiation'
-  | 'Accepted'
-  | 'Rejected'
-  | 'Expired'
-  | 'Converted to SO';
+  | 'DRAFT'
+  | 'SHARED'
+  | 'FOLLOW_UP'
+  | 'NEGOTIATION'
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'EXPIRED'
+  | 'CONVERTED_TO_SO';
 
-export interface QuoteLineItem {
-  productId: string;
-  quantity: number;
-  basePrice: number;
-  discount: number;
-  tax: number;
+export interface QuoteItem {
+  id?: string;
+  productId?: string | null;
+  productVariantId?: string | null;
+  productNameSnapshot?: string | null;
+  skuSnapshot?: string | null;
+  description?: string | null;
+  quantity: number | string;
+  unit?: string | null;
+  unitPrice: number | string;
+  discountPercent?: number | string;
+  discountAmount?: number | string;
+  taxPercent?: number | string;
+  taxAmount?: number | string;
+  lineTotal: number | string;
+  product?: Product | null;
 }
 
 export interface Quote {
   id: string;
   tenantId: string;
   quoteNumber: string;
-  rfqId: string;
-  rfqNumber: string;
+  version?: number;
+  rfqId?: string | null;
   customerId: string;
-  customerName: string;
-  companyName: string;
-  projectName: string;
-  lineItems: QuoteLineItem[];
-  deliveryCharges: number;
-  terms: string;
-  validUntil: string;
   status: QuoteStatus;
+  validUntil?: string | null;
+  currency?: string;
+  subtotal: number | string;
+  discountAmount: number | string;
+  taxAmount: number | string;
+  totalAmount: number | string;
+  deliveryCharges: number | string;
+  notes?: string | null;
+  termsAndConditions?: string | null;
+  sharedAt?: string | null;
+  acceptedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
   createdAt: string;
-  approvedAt?: string;
-  sharedAt?: string;
-  assignedTo?: string;
-  rejectionReason?: string;
-  lostReason?: string;
-  lostRemarks?: string;
+  customer?: { id: string; companyName: string; contactPerson?: string | null };
+  rfq?: { id: string; rfqNumber: string } | null;
+  items?: QuoteItem[];
 }
 
-export type FollowUpMethod = 'WhatsApp' | 'Phone' | 'Email' | 'Meeting' | 'Other';
-export type FollowUpStatus = 'Scheduled' | 'Completed' | 'Overdue' | 'Cancelled';
+export type FollowUpMethod = 'PHONE' | 'EMAIL' | 'WHATSAPP' | 'MEETING' | 'OTHER';
+export type FollowUpStatus = 'OPEN' | 'COMPLETED' | 'CANCELLED';
 
 export interface FollowUp {
   id: string;
   tenantId: string;
   quoteId: string;
-  quoteNumber: string;
   customerId: string;
-  customerName: string;
-  contactPerson: string;
+  assignedToId?: string | null;
   method: FollowUpMethod;
-  lastContact: string;
-  nextFollowUp: string;
+  subject?: string | null;
+  notes?: string | null;
+  lastContactAt?: string | null;
+  nextFollowUpAt?: string | null;
   status: FollowUpStatus;
-  assignedTo: string;
-  notes: string;
+  createdAt: string;
+  customer?: { id: string; companyName: string; contactPerson?: string | null };
+  quote?: { id: string; quoteNumber: string };
+  assignedTo?: { id: string; name: string } | null;
 }
 
-export interface PurchaseOrder {
+export type SalesOrderStatus = 'ACTIVE' | 'DISPATCHED' | 'DELIVERED' | 'CANCELLED';
+
+export interface SalesOrderItem {
+  id?: string;
+  productId?: string | null;
+  productVariantId?: string | null;
+  productNameSnapshot?: string | null;
+  skuSnapshot?: string | null;
+  description?: string | null;
+  quantity: number | string;
+  unit?: string | null;
+  unitPrice: number | string;
+  discountPercent?: number | string;
+  discountAmount?: number | string;
+  taxPercent?: number | string;
+  taxAmount?: number | string;
+  lineTotal: number | string;
+  product?: Product | null;
+}
+
+export interface SalesOrder {
   id: string;
   tenantId: string;
-  poNumber: string;
-  soNumber?: string;
-  quoteId: string;
-  quoteNumber: string;
-  rfqNumber: string;
+  soNumber: string;
   customerId: string;
-  customerName: string;
-  companyName: string;
-  billingAddress: string;
-  deliveryAddress: string;
-  lineItems: QuoteLineItem[];
-  deliveryCharges: number;
-  terms: string;
-  poDate: string;
-  dispatchDate?: string;
-  dueDate?: string;
-  trackingId?: string;
-  status: 'Active' | 'Dispatched' | 'Delivered' | 'Cancelled';
+  quoteId?: string | null;
+  customerPoNumber?: string | null;
+  status: SalesOrderStatus;
+  subtotal: number | string;
+  discountAmount: number | string;
+  taxAmount: number | string;
+  totalAmount: number | string;
+  deliveryCharges: number | string;
+  customerNameSnapshot?: string | null;
+  billingAddressSnapshot?: string | null;
+  shippingAddressSnapshot?: string | null;
+  notes?: string | null;
+  termsAndConditions?: string | null;
+  orderDate: string;
+  dueDate?: string | null;
+  dispatchDate?: string | null;
+  deliveredAt?: string | null;
+  trackingId?: string | null;
+  createdAt: string;
+  customer?: { id: string; companyName: string; contactPerson?: string | null };
+  quote?: { id: string; quoteNumber: string } | null;
+  items?: SalesOrderItem[];
 }
 
-export type CustomerStatus = 'Active' | 'Inactive';
+export type CustomerStatus = 'LEAD' | 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 
 export interface Customer {
   id: string;
   tenantId: string;
-  name: string;
+  customerCode: string;
   companyName: string;
-  mobile: string;
-  email: string;
-  address: string;
-  city: string;
-  gst: string;
+  contactPerson?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  alternatePhone?: string | null;
+  gstNumber?: string | null;
+  panNumber?: string | null;
+  businessType?: string | null;
   status: CustomerStatus;
+  notes?: string | null;
   createdAt: string;
 }
 
-export type ArchitectStatus = 'Pending' | 'Approved' | 'Rejected' | 'Suspended' | 'Active';
+export type ArchitectStatus = 'PROSPECT' | 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
+
+export interface DiscountHistory {
+  id: string;
+  architectId: string;
+  previousDiscount: number | string;
+  newDiscount: number | string;
+  reason?: string | null;
+  effectiveFrom: string;
+  createdAt: string;
+}
 
 export interface Architect {
   id: string;
   tenantId: string;
-  name: string;
+  architectCode: string;
   firmName: string;
-  mobile: string;
-  whatsapp: string;
-  email: string;
-  address: string;
-  city: string;
-  licenseNumber: string;
-  gst: string;
-  website: string;
-  specialization: string;
+  contactPerson?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  licenseNumber?: string | null;
+  city?: string | null;
+  state?: string | null;
   status: ArchitectStatus;
-  discount?: number;
-  discountExpiry?: string;
-  discountEffective?: string;
-  discountHistory: DiscountHistory[];
+  currentDiscount?: number | string | null;
+  notes?: string | null;
   createdAt: string;
+  discountHistory?: DiscountHistory[];
 }
 
-export interface DiscountHistory {
-  previous: number;
-  next: number;
-  changedBy: string;
-  date: string;
-}
-
+/** Client-side quote-cart entry. */
 export interface QuoteCartItem {
   productId: string;
   quantity: number;
+}
+
+/** Line total helper for legacy UI code (server persists the authoritative value). */
+export function computeQuoteItemTotal(li: { quantity: number | string; unitPrice: number | string; discountPercent?: number | string; taxPercent?: number | string }): number {
+  const qty = Number(li.quantity);
+  const price = Number(li.unitPrice);
+  const disc = Number(li.discountPercent ?? 0);
+  const tax = Number(li.taxPercent ?? 0);
+  const gross = qty * price;
+  const net = gross * (1 - disc / 100);
+  return net * (1 + tax / 100);
 }

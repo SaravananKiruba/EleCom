@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/server/prisma';
 import * as bcrypt from 'bcryptjs';
+import { requireTenant, isResponse } from '@/src/server/auth';
 
 export async function GET(req: NextRequest) {
-  const tenantId = req.nextUrl.searchParams.get('tenantId');
-  if (!tenantId) return NextResponse.json({ error: 'tenantId required' }, { status: 400 });
+  const auth = requireTenant(req);
+  if (isResponse(auth)) return auth;
+  if (auth.role !== 'TENANT_ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   const users = await prisma.user.findMany({
-    where: { tenantId, deletedAt: null },
+    where: { tenantId: auth.tenantId!, deletedAt: null },
     select: { id: true, name: true, email: true, role: true, status: true, lastLoginAt: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
@@ -14,8 +18,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { tenantId, name, email, password, role } = await req.json();
-  if (!tenantId || !name || !email || !password || !role) {
+  const auth = requireTenant(req);
+  if (isResponse(auth)) return auth;
+  if (auth.role !== 'TENANT_ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { name, email, password, role } = await req.json();
+  if (!name || !email || !password || !role) {
     return NextResponse.json({ error: 'All fields required' }, { status: 400 });
   }
   const allowed = ['TENANT_ADMIN', 'SALES'];
@@ -27,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await prisma.user.create({
-    data: { tenantId, name, email: email.toLowerCase().trim(), passwordHash, role, status: 'ACTIVE' },
+    data: { tenantId: auth.tenantId!, name, email: email.toLowerCase().trim(), passwordHash, role, status: 'ACTIVE' },
     select: { id: true, name: true, email: true, role: true, status: true, createdAt: true },
   });
   return NextResponse.json(user, { status: 201 });

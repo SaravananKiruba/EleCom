@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { approveTenant, suspendTenant, getTenantById, deleteTenantCascade } from '@/src/server/services/tenantService';
+import { requireRole, isResponse } from '@/src/server/auth';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = requireRole(req, ['SAAS_ADMIN']);
+  if (isResponse(auth)) return auth;
   const { id } = await params;
   const tenant = await getTenantById(id);
   if (!tenant) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -15,16 +18,18 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = requireRole(req, ['SAAS_ADMIN']);
+  if (isResponse(auth)) return auth;
   const { id } = await params;
   const body = await req.json();
-  const { action, performedById, reason } = body;
+  const { action, reason } = body;
 
   if (action === 'approve') {
-    const tenant = await approveTenant(id, performedById);
+    const tenant = await approveTenant(id, auth.id);
     return NextResponse.json(tenant);
   }
   if (action === 'suspend') {
-    const tenant = await suspendTenant(id, performedById, reason);
+    const tenant = await suspendTenant(id, auth.id, reason);
     return NextResponse.json(tenant);
   }
 
@@ -36,9 +41,10 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = requireRole(req, ['SAAS_ADMIN']);
+  if (isResponse(auth)) return auth;
   const { id } = await params;
 
-  // Confirmation guard: require ?confirm=<tenant-slug> in query
   const confirm = req.nextUrl.searchParams.get('confirm');
   const tenant = await getTenantById(id);
   if (!tenant) return NextResponse.json({ error: 'Not found' }, { status: 404 });

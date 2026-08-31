@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
+import { AUTH_COOKIE } from '@/src/server/auth';
 
 export async function POST() {
   const res = NextResponse.json({ success: true });
-  res.cookies.set('crmboo_token', '', { maxAge: 0, path: '/' });
+  res.cookies.set(AUTH_COOKIE, '', { maxAge: 0, path: '/' });
   return res;
 }

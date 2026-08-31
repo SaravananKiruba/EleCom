@@ -1,82 +1,85 @@
 'use client';
 
-import {
-  Box, Text, Button, HStack, VStack, Flex, SimpleGrid, Input, Textarea,
-  Field,
-} from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Box, Text, Button, HStack, VStack, Flex, SimpleGrid, Input, Textarea, Field } from '@chakra-ui/react';
 import { useAppState } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
-import { products, brands } from '@/data/mockData';
-import { RFQ } from '@/types';
 import { EmptyState } from '@/components/ui/EmptyState';
 
-function generateRFQNumber() {
-  const num = Math.floor(100000 + Math.random() * 900000);
-  return `RFQ-2026-${num}`;
-}
+interface CartProduct { id: string; name: string; sku: string; imageUrl?: string | null; }
 
 export default function RFQPage() {
   const { state, dispatch } = useAppState();
-  const { user } = useAuth();
+  const { user, loading, isCustomer } = useAuth();
   const router = useRouter();
   const { cartItems } = state;
 
-  const [form, setForm] = useState({
-    customerName: '', companyName: '', mobile: '', whatsapp: '', email: '',
-    projectName: '', deliveryLocation: '', requiredDeliveryDate: '', additionalRequirements: '', remarks: '',
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState<RFQ | null>(null);
+  const [products, setProducts] = useState<Record<string, CartProduct>>({});
+  const [form, setForm] = useState({ subject: '', notes: '', requiredDate: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState<{ rfqNumber: string } | null>(null);
+  const [error, setError] = useState('');
 
-  const required = ['customerName', 'companyName', 'mobile', 'email', 'projectName', 'deliveryLocation'];
-
-  const validate = () => {
-    const e: Record<string, string> = {};
-    required.forEach(k => {
-      if (!form[k as keyof typeof form].trim()) e[k] = 'This field is required.';
+  useEffect(() => {
+    if (cartItems.length === 0) return;
+    fetch('/api/store/current/products?take=200').then(r => r.json()).then(d => {
+      const map: Record<string, CartProduct> = {};
+      (d.products ?? []).forEach((p: CartProduct) => { map[p.id] = p; });
+      setProducts(map);
     });
-    if (form.mobile && !/^\d{10}$/.test(form.mobile)) e.mobile = 'Enter a valid 10-digit mobile number.';
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email address.';
-    return e;
-  };
+  }, [cartItems]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (loading) return;
+    if (!isCustomer) router.replace(`/login?next=${encodeURIComponent('/rfq')}`);
+  }, [loading, isCustomer, router]);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
-
-    const rfqNumber = generateRFQNumber();
-    const rfq: RFQ = {
-      id: `rfq-${Date.now()}`,
-      tenantId: user.tenantId ?? 'tenant-1',
-      rfqNumber,
-      customerId: user.customerId ?? 'cust-self',
-      ...form,
-      items: cartItems.map(i => ({ productId: i.productId, quantity: i.quantity })),
-      status: 'New',
-      createdAt: new Date().toISOString().split('T')[0],
-      timeline: [{ date: new Date().toISOString().split('T')[0], action: 'RFQ Created', by: 'Customer' }],
-    };
-    dispatch({ type: 'ADD_RFQ', payload: rfq });
-    dispatch({ type: 'CLEAR_CART' });
-    setSubmitted(rfq);
+    if (!user.customerId) { setError('No customer profile linked to this account. Contact support.'); return; }
+    if (cartItems.length === 0) { setError('Add products to your cart first.'); return; }
+    setError('');
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/rfqs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: user.customerId,
+          source: 'WEBSITE',
+          subject: form.subject || undefined,
+          notes: form.notes || undefined,
+          requestedDate: form.requiredDate || undefined,
+          items: cartItems.map(ci => {
+            const p = products[ci.productId];
+            return {
+              productId: ci.productId,
+              productNameSnapshot: p?.name,
+              skuSnapshot: p?.sku,
+              quantity: ci.quantity,
+            };
+          }),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? 'Failed to submit RFQ'); return; }
+      dispatch({ type: 'CLEAR_CART' });
+      setSubmitted({ rfqNumber: data.rfqNumber });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const set = (k: string, v: string) => {
-    setForm(p => ({ ...p, [k]: v }));
-    if (errors[k]) setErrors(p => ({ ...p, [k]: '' }));
-  };
+  if (loading) return <Box p={20} textAlign="center" color="gray.400">Loading…</Box>;
+  if (!isCustomer) return null;
 
   if (cartItems.length === 0 && !submitted) {
     return (
       <Box maxW="900px" mx="auto" px={{ base: 4, md: 6 }} py={10}>
-        <EmptyState
-          icon="📋"
-          title="No products in your quote cart"
-          description="Add products to your cart before submitting a quote request."
+        <EmptyState icon="📋" title="No products in your quote cart"
+          description="Add products before submitting a quote request."
           action={<Link href="/catalogue"><Button colorPalette="blue">Browse Products</Button></Link>}
         />
       </Box>
@@ -90,30 +93,12 @@ export default function RFQPage() {
           <Text fontSize="4xl" mb={4}>✅</Text>
           <Text fontSize="2xl" fontWeight={800} color="gray.900" mb={2}>Quote Request Submitted!</Text>
           <Text color="gray.600" fontSize="md" mb={6}>
-            Our team will review your requirement and send you a competitive quote <Text as="span" fontWeight={700} color="green.600">within 10 minutes</Text>.
+            RFQ <Text as="span" fontWeight={700} fontFamily="mono" color="blue.700">{submitted.rfqNumber}</Text> received.
+            Our team will send a quote shortly.
           </Text>
-          <Box bg="white" rounded="xl" p={5} border="1px solid" borderColor="gray.100" mb={6} textAlign="left">
-            <SimpleGrid columns={2} gap={3}>
-              {[
-                ['RFQ Number', submitted.rfqNumber],
-                ['Date', submitted.createdAt],
-                ['Status', 'New'],
-                ['Products', `${submitted.items.length} items`],
-              ].map(([label, val]) => (
-                <Box key={label}>
-                  <Text fontSize="xs" color="gray.500" fontWeight={500}>{label}</Text>
-                  <Text fontSize="sm" fontWeight={700} color="gray.900">{val}</Text>
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Box>
           <HStack gap={3} justify="center" flexWrap="wrap">
-            <Link href="/dashboard">
-              <Button colorPalette="blue" size="lg" rounded="xl">View My RFQs</Button>
-            </Link>
-            <Link href="/catalogue">
-              <Button variant="outline" colorPalette="gray" size="lg" rounded="xl">Continue Browsing</Button>
-            </Link>
+            <Link href="/dashboard"><Button colorPalette="blue" size="lg" rounded="xl">View My RFQs</Button></Link>
+            <Link href="/catalogue"><Button variant="outline" size="lg" rounded="xl">Continue Browsing</Button></Link>
           </HStack>
         </Box>
       </Box>
@@ -131,96 +116,45 @@ export default function RFQPage() {
       </HStack>
 
       <Text fontSize="2xl" fontWeight={700} color="gray.900" mb={1}>Request a Quote</Text>
-      <Text color="gray.500" fontSize="sm" mb={6}>Fill in your details and we&apos;ll get back with competitive pricing.</Text>
+      <Text color="gray.500" fontSize="sm" mb={6}>Signed in as {user.name}. We&apos;ll get back with pricing soon.</Text>
+
+      {error && <Box bg="red.50" border="1px solid" borderColor="red.200" rounded="lg" p={3} mb={4}><Text fontSize="sm" color="red.700">{error}</Text></Box>}
 
       <SimpleGrid columns={{ base: 1, lg: 3 }} gap={6} alignItems="flex-start">
-        {/* Form */}
         <Box gridColumn={{ lg: 'span 2' }}>
-          <Box as="form" onSubmit={handleSubmit} bg="white" rounded="2xl" p={{ base: 4, md: 6 }} border="1px solid" borderColor="gray.100" shadow="sm">
-            <Text fontWeight={700} fontSize="md" color="gray.700" mb={4}>Contact Information</Text>
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mb={4}>
-              {[
-                { key: 'customerName', label: 'Your Name', ph: 'Rajesh Kumar', req: true },
-                { key: 'companyName', label: 'Company Name', ph: 'Kumar Constructions', req: true },
-                { key: 'mobile', label: 'Mobile Number', ph: '9876543210', req: true },
-                { key: 'whatsapp', label: 'WhatsApp Number', ph: '9876543210', req: false },
-                { key: 'email', label: 'Email Address', ph: 'name@company.com', req: true },
-              ].map(f => (
-                <Field.Root key={f.key} invalid={!!errors[f.key]}>
-                  <Field.Label fontSize="sm" fontWeight={600} color="gray.700">
-                    {f.label} {f.req && <Text as="span" color="red.500">*</Text>}
-                  </Field.Label>
-                  <Input
-                    placeholder={f.ph}
-                    value={form[f.key as keyof typeof form]}
-                    onChange={e => set(f.key, e.target.value)}
-                    borderColor={errors[f.key] ? 'red.300' : 'gray.200'}
-                    _focus={{ borderColor: 'blue.400' }}
-                  />
-                  {errors[f.key] && <Field.ErrorText>{errors[f.key]}</Field.ErrorText>}
-                </Field.Root>
-              ))}
-            </SimpleGrid>
-
-            <Text fontWeight={700} fontSize="md" color="gray.700" mb={4} mt={2}>Project Details</Text>
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} mb={4}>
-              <Field.Root invalid={!!errors.projectName}>
-                <Field.Label fontSize="sm" fontWeight={600} color="gray.700">
-                  Project Name <Text as="span" color="red.500">*</Text>
-                </Field.Label>
-                <Input placeholder="Andheri Office Complex" value={form.projectName} onChange={e => set('projectName', e.target.value)} borderColor={errors.projectName ? 'red.300' : 'gray.200'} _focus={{ borderColor: 'blue.400' }} />
-                {errors.projectName && <Field.ErrorText>{errors.projectName}</Field.ErrorText>}
-              </Field.Root>
-              <Field.Root invalid={!!errors.deliveryLocation}>
-                <Field.Label fontSize="sm" fontWeight={600} color="gray.700">
-                  Delivery Location <Text as="span" color="red.500">*</Text>
-                </Field.Label>
-                <Input placeholder="City, State" value={form.deliveryLocation} onChange={e => set('deliveryLocation', e.target.value)} borderColor={errors.deliveryLocation ? 'red.300' : 'gray.200'} _focus={{ borderColor: 'blue.400' }} />
-                {errors.deliveryLocation && <Field.ErrorText>{errors.deliveryLocation}</Field.ErrorText>}
+          <Box as="form" onSubmit={submit} bg="white" rounded="2xl" p={{ base: 4, md: 6 }} border="1px solid" borderColor="gray.100" shadow="sm">
+            <Text fontWeight={700} fontSize="md" color="gray.700" mb={4}>Project Details</Text>
+            <VStack gap={4} align="stretch">
+              <Field.Root>
+                <Field.Label fontSize="sm" fontWeight={600}>Subject / Project Name</Field.Label>
+                <Input placeholder="Andheri Office Complex" value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} />
               </Field.Root>
               <Field.Root>
-                <Field.Label fontSize="sm" fontWeight={600} color="gray.700">Required Delivery Date</Field.Label>
-                <Input type="date" value={form.requiredDeliveryDate} onChange={e => set('requiredDeliveryDate', e.target.value)} borderColor="gray.200" _focus={{ borderColor: 'blue.400' }} />
+                <Field.Label fontSize="sm" fontWeight={600}>Required Delivery Date</Field.Label>
+                <Input type="date" value={form.requiredDate} onChange={e => setForm(p => ({ ...p, requiredDate: e.target.value }))} />
               </Field.Root>
-            </SimpleGrid>
-
-            <Field.Root mb={4}>
-              <Field.Label fontSize="sm" fontWeight={600} color="gray.700">Additional Requirements</Field.Label>
-              <Textarea placeholder="Any specific brand, certification, or technical requirements..." value={form.additionalRequirements} onChange={e => set('additionalRequirements', e.target.value)} rows={3} borderColor="gray.200" _focus={{ borderColor: 'blue.400' }} />
-            </Field.Root>
-
-            <Field.Root mb={6}>
-              <Field.Label fontSize="sm" fontWeight={600} color="gray.700">Remarks</Field.Label>
-              <Textarea placeholder="Any other notes for our team..." value={form.remarks} onChange={e => set('remarks', e.target.value)} rows={2} borderColor="gray.200" _focus={{ borderColor: 'blue.400' }} />
-            </Field.Root>
-
-            <Button type="submit" colorPalette="blue" size="lg" w="full" rounded="xl" fontWeight={700}>
-              Submit Quote Request
-            </Button>
+              <Field.Root>
+                <Field.Label fontSize="sm" fontWeight={600}>Additional Requirements / Notes</Field.Label>
+                <Textarea rows={4} placeholder="Certifications, brand preferences, technical needs..." value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
+              </Field.Root>
+              <Button type="submit" colorPalette="blue" size="lg" w="full" rounded="xl" fontWeight={700} loading={submitting}>Submit Quote Request</Button>
+            </VStack>
           </Box>
         </Box>
 
-        {/* Product summary */}
         <Box>
           <Box bg="white" rounded="xl" p={5} border="1px solid" borderColor="gray.100" shadow="sm" position={{ lg: 'sticky' }} top="80px">
-            <Text fontWeight={700} fontSize="sm" color="gray.700" mb={3}>
-              Selected Products ({cartItems.length})
-            </Text>
+            <Text fontWeight={700} fontSize="sm" color="gray.700" mb={3}>Selected Products ({cartItems.length})</Text>
             <VStack gap={3} align="stretch">
               {cartItems.map(item => {
-                const product = products.find(p => p.id === item.productId);
-                const brand = brands.find(b => b.id === product?.brandId);
-                if (!product) return null;
+                const p = products[item.productId];
                 return (
                   <Flex key={item.productId} gap={3} align="center">
                     <Box bg="gray.50" rounded="lg" w="40px" h="40px" flexShrink={0} display="flex" alignItems="center" justifyContent="center" overflow="hidden">
-                      <img src={product.imageUrl} alt={product.name}
-                        style={{ maxHeight: '36px', maxWidth: '36px', objectFit: 'contain' }}
-                        onError={(e) => { e.currentTarget.src = `https://placehold.co/36x36/e2e8f0/718096?text=P` }}
-                      />
+                      {p?.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ maxHeight: 36, maxWidth: 36, objectFit: 'contain' }} /> : <Text fontSize="xs" color="gray.400">—</Text>}
                     </Box>
                     <Box flex={1} minW={0}>
-                      <Text fontSize="xs" fontWeight={600} color="gray.800" lineHeight="short" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</Text>
+                      <Text fontSize="xs" fontWeight={600} color="gray.800">{p?.name ?? item.productId}</Text>
                       <Text fontSize="xs" color="gray.500">Qty: {item.quantity}</Text>
                     </Box>
                   </Flex>

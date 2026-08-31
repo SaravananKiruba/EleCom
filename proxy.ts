@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as jwt from 'jsonwebtoken';
+import { getJwtSecret, AUTH_COOKIE } from '@/src/server/auth';
 
 const PLATFORM_HOSTS = ['localhost', 'crmboo.io', 'crmboo.com', 'www.crmboo.com', 'www.crmboo.io'];
-const JWT_SECRET = process.env.JWT_SECRET ?? 'crmboo-dev-secret-change-in-production';
-const COOKIE = 'crmboo_token';
 
 interface JWTPayload { role: string; }
 
@@ -23,10 +22,10 @@ export async function proxy(req: NextRequest) {
   // ── Auth guard ─────────────────────────────────────────────────────────
   const rule = PROTECTED.find(r => pathname === r.path || pathname.startsWith(r.path + '/'));
   if (rule) {
-    const token = req.cookies.get(COOKIE)?.value;
+    const token = req.cookies.get(AUTH_COOKIE)?.value;
     if (!token) return NextResponse.redirect(new URL('/login', req.url));
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
+      const payload = jwt.verify(token, getJwtSecret()) as JWTPayload;
       if (!rule.roles.includes(payload.role)) {
         return NextResponse.redirect(new URL('/login', req.url));
       }

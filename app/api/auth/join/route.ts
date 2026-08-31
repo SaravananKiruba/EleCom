@@ -17,7 +17,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
   }
 
-  const slug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const baseSlug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  if (!baseSlug) {
+    return NextResponse.json({ error: 'Company name must contain letters or digits' }, { status: 400 });
+  }
+
+  // Find a free slug: base, base-2, base-3, ...
+  let slug = baseSlug;
+  for (let i = 2; i < 100; i++) {
+    const exists = await prisma.tenant.findUnique({ where: { slug }, select: { id: true } });
+    if (!exists) break;
+    slug = `${baseSlug}-${i}`;
+  }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -51,6 +62,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       tenantId: result.tenant.id,
       tenantName: result.tenant.name,
+      tenantSlug: result.tenant.slug,
       status: result.tenant.status,
       message: 'Registration successful. Your account is pending approval. You will be notified once approved.',
     }, { status: 201 });

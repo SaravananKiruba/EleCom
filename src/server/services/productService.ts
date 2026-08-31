@@ -170,12 +170,12 @@ export async function upsertBrand(tenantId: string, name: string) {
   });
 }
 
-export async function upsertCategory(tenantId: string, name: string) {
+export async function upsertCategory(tenantId: string, name: string, parentId?: string | null) {
   const slug = toSlug(name);
   return prisma.category.upsert({
     where: { tenantId_slug: { tenantId, slug } },
-    update: {},
-    create: { tenantId, name, slug },
+    update: { parentId: parentId ?? undefined },
+    create: { tenantId, name, slug, parentId: parentId ?? null },
   });
 }
 

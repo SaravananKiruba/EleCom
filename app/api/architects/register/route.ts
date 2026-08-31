@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/server/prisma';
 import { ArchitectStatus, UserRole, UserStatus, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { resolvePublicTenant } from '@/src/server/resolveTenant';
+import { AUTH_COOKIE, signToken } from '@/src/server/auth';
 
 // POST /api/architects/register — architect self-registration (status: PROSPECT until approved)
 export async function POST(req: NextRequest) {
@@ -15,12 +17,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
   }
 
-  const tenant = tenantSlug
-    ? await prisma.tenant.findUnique({ where: { slug: tenantSlug } })
-    : await prisma.tenant.findFirst({ where: { status: 'ACTIVE', deletedAt: null }, orderBy: { createdAt: 'asc' } });
-
-  if (!tenant || tenant.status !== 'ACTIVE') {
-    return NextResponse.json({ error: 'No active tenant found. Please contact support.' }, { status: 404 });
+  const tenant = await resolvePublicTenant(req, tenantSlug);
+  if (!tenant) {
+    return NextResponse.json({ error: 'No active tenant found for this request. Contact support.' }, { status: 404 });
   }
 
   try {

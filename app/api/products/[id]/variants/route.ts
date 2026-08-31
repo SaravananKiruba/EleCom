@@ -1,26 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/server/prisma';
+import { requireTenant, isResponse } from '@/src/server/auth';
 
-// GET /api/products/[id]/variants?tenantId=
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = requireTenant(req);
+  if (isResponse(auth)) return auth;
   const { id } = await params;
-  const tenantId = req.nextUrl.searchParams.get('tenantId');
-  if (!tenantId) return NextResponse.json({ error: 'tenantId required' }, { status: 400 });
   const product = await prisma.product.findUnique({ where: { id }, include: { variants: true } });
-  if (!product || product.tenantId !== tenantId) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!product || product.tenantId !== auth.tenantId) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(product.variants);
 }
 
-// POST /api/products/[id]/variants — create or update variants in bulk
+// POST /api/products/[id]/variants — replace all variants
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = requireTenant(req);
+  if (isResponse(auth)) return auth;
+  if (auth.role !== 'TENANT_ADMIN' && auth.role !== 'SALES') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   const { id } = await params;
-  const { tenantId, variants } = await req.json();
-  if (!tenantId) return NextResponse.json({ error: 'tenantId required' }, { status: 400 });
+  const { variants } = await req.json();
 
   const product = await prisma.product.findUnique({ where: { id } });
-  if (!product || product.tenantId !== tenantId) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!product || product.tenantId !== auth.tenantId) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Replace all variants
   await prisma.productVariant.deleteMany({ where: { productId: id } });
   const created = await prisma.productVariant.createMany({
     data: (variants as Array<{ sku: string; name: string; price?: number; stockQuantity?: number }>).map(v => ({

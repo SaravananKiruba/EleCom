@@ -1,182 +1,172 @@
-﻿'use client';
+'use client';
 
-import {
-  Box, Text, Button, HStack, VStack, Flex, Separator, SimpleGrid, Textarea, Field,
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Box, Text, Button, HStack, VStack, Flex, Separator, SimpleGrid, Input, Field, Textarea,
   DialogRoot, DialogBackdrop, DialogContent, DialogHeader, DialogBody, DialogFooter, DialogCloseTrigger,
 } from '@chakra-ui/react';
-import { useState, useMemo } from 'react';
-import { useAppState } from '@/context/AppContext';
-import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SidePanel } from '@/components/ui/SidePanel';
-import { products, brands } from '@/data/mockData';
-import { Quote, QuoteStatus, PurchaseOrder } from '@/types';
+import { Quote, QuoteStatus } from '@/types';
 import { toaster } from '@/components/ui/toaster';
 import { downloadCSV } from '@/utils/csvExport';
+import { formatCurrency, formatEnum } from '@/utils/format';
 
 const PAGE_SIZE = 10;
-const STATUSES: QuoteStatus[] = ['Draft', 'Shared', 'Follow-Up', 'Negotiation', 'Accepted', 'Rejected', 'Expired', 'Converted to SO'];
-const LOST_REASONS = ['Price too high', 'Competitor', 'Requirement cancelled', 'Delivery timeline', 'Product unavailable', 'Project postponed', 'Budget issue', 'Other'];
+const STATUSES: QuoteStatus[] = ['DRAFT', 'SHARED', 'FOLLOW_UP', 'NEGOTIATION', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'CONVERTED_TO_SO'];
 
 export default function AdminQuotationsPage() {
-  const { state, dispatch } = useAppState();
-  const { user } = useAuth();
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Quote | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [lostOpen, setLostOpen] = useState(false);
   const [lostReason, setLostReason] = useState('');
-  const [lostRemarks, setLostRemarks] = useState('');
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [customerPoNumber, setCustomerPoNumber] = useState('');
+  const [billingAddress, setBillingAddress] = useState('');
+  const [shippingAddress, setShippingAddress] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [converting, setConverting] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    fetch('/api/quotes?take=500').then(r => r.json()).then(d => setQuotes(d.quotes ?? [])).finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => {
-    let list = [...state.quotes];
+    let list = quotes;
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(qt =>
         qt.quoteNumber.toLowerCase().includes(q) ||
-        qt.customerName.toLowerCase().includes(q) ||
-        qt.projectName.toLowerCase().includes(q)
+        (qt.customer?.companyName ?? '').toLowerCase().includes(q),
       );
     }
     if (statusFilter) list = list.filter(qt => qt.status === statusFilter);
     return list;
-  }, [state.quotes, search, statusFilter]);
+  }, [quotes, search, statusFilter]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const lineTotal = (li: Quote['lineItems'][0]) => {
-    const after = li.basePrice * (1 - li.discount / 100);
-    return after * (1 + li.tax / 100) * li.quantity;
-  };
-  const grandTotal = (q: Quote) => q.lineItems.reduce((s, li) => s + lineTotal(li), 0) + q.deliveryCharges;
-
-  const update = (patch: Partial<Quote>, successMsg: string) => {
-    const updated = { ...selected!, ...patch };
-    dispatch({ type: 'UPDATE_QUOTE', payload: updated });
-    setSelected(updated);
-    toaster.create({ title: successMsg, type: 'success', duration: 2500 });
+  const openDetail = async (q: Quote) => {
+    const full = await fetch(`/api/quotes/${q.id}`).then(r => r.ok ? r.json() : q);
+    setSelected(full);
+    setDetailOpen(true);
   };
 
-  const shareWhatsapp = () => {
-    update({ status: 'Shared', sharedAt: '2026-08-22' }, 'Quotation shared via WhatsApp');
-    setWhatsappOpen(false);
+  const setStatus = async (q: Quote, status: QuoteStatus, extra?: Record<string, unknown>) => {
+    const res = await fetch(`/api/quotes/${q.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, ...extra }),
+    });
+    if (res.ok) {
+      toaster.create({ title: `Quote ${formatEnum(status)}`, type: 'success', duration: 2000 });
+      const updated = await res.json();
+      setSelected(prev => prev ? { ...prev, ...updated } : prev);
+      load();
+    } else {
+      toaster.create({ title: 'Update failed', type: 'error', duration: 3000 });
+    }
   };
 
-  const markWon = () => {
-    update({ status: 'Accepted' }, 'Quote marked as Won!');
-    const q = selected!;
-    const soNum = `SO-2026-${Math.floor(300000 + Math.random() * 99999)}`;
-    const so: PurchaseOrder = {
-      id: `so-${Date.now()}`,
-      tenantId: user.tenantId ?? 'tenant-1',
-      poNumber: soNum, soNumber: soNum,
-      quoteId: q.id, quoteNumber: q.quoteNumber, rfqNumber: q.rfqNumber,
-      customerId: q.customerId, customerName: q.customerName, companyName: q.companyName,
-      billingAddress: `${q.companyName}, India`, deliveryAddress: `${q.projectName}, India`,
-      lineItems: q.lineItems, deliveryCharges: q.deliveryCharges,
-      terms: q.terms, poDate: '2026-08-22', status: 'Active',
-    };
-    dispatch({ type: 'ADD_PO', payload: so });
-    toaster.create({ title: `Sales Order ${soNum} created!`, type: 'success', duration: 3000 });
-  };
-
-  const markLost = () => {
-    if (!lostReason) return;
-    update({ status: 'Rejected', lostReason, lostRemarks }, 'Quote marked as Lost.');
-    setLostOpen(false);
-  };
-
-  const createRevision = () => {
+  const submitLost = async () => {
     if (!selected) return;
-    const q = selected;
-    // Version suffix: Q-001 → Q-001-R2, Q-001-R2 → Q-001-R3
-    const base = q.quoteNumber.replace(/-R\d+$/, '');
-    const revNums = state.quotes
-      .filter(x => x.quoteNumber.startsWith(base))
-      .map(x => { const m = x.quoteNumber.match(/-R(\d+)$/); return m ? Number(m[1]) : 1; });
-    const nextRev = Math.max(...revNums) + 1;
-    const newQuote: Quote = {
-      ...q,
-      id: `q-rev-${Date.now()}`,
-      quoteNumber: `${base}-R${nextRev}`,
-      status: 'Draft',
-      createdAt: new Date().toISOString(),
-      sharedAt: undefined,
-      approvedAt: undefined,
-    };
-    dispatch({ type: 'ADD_QUOTE', payload: newQuote });
-    toaster.create({ title: `Revision ${newQuote.quoteNumber} created`, type: 'success', duration: 2500 });
-    setSelected(newQuote);
+    await setStatus(selected, 'REJECTED', { rejectionReason: lostReason });
+    setLostOpen(false);
+    setLostReason('');
+  };
+
+  const openConvert = (q: Quote) => {
+    setSelected(q);
+    setCustomerPoNumber('');
+    setBillingAddress('');
+    setShippingAddress('');
+    setDueDate('');
+    setConvertOpen(true);
+  };
+
+  const submitConvert = async () => {
+    if (!selected) return;
+    setConverting(true);
+    try {
+      const res = await fetch('/api/sales-orders/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quoteId: selected.id,
+          customerPoNumber: customerPoNumber || undefined,
+          billingAddressSnapshot: billingAddress || undefined,
+          shippingAddressSnapshot: shippingAddress || undefined,
+          dueDate: dueDate || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toaster.create({ title: data.error ?? 'Conversion failed', type: 'error', duration: 4000 }); return; }
+      toaster.create({ title: `Sales Order ${data.soNumber} created`, type: 'success', duration: 3000 });
+      setConvertOpen(false);
+      load();
+    } finally {
+      setConverting(false);
+    }
   };
 
   return (
     <Box p={{ base: 4, md: 6 }}>
-      <PageHeader title="Quotations" subtitle={`${state.quotes.length} total quotes`}
+      <PageHeader title="Quotations" subtitle={`${quotes.length} total`}
         actions={
           <Button size="sm" variant="outline" colorPalette="green"
-            onClick={() => downloadCSV(filtered.map(q => ({ Quote: q.quoteNumber, Customer: q.customerName, Project: q.projectName, Status: q.status, Total: grandTotal(q).toFixed(2), Date: q.createdAt })), 'quotations.csv')}>
-            ↓ Export CSV
-          </Button>
-        }
-      />
+            onClick={() => downloadCSV(filtered.map(q => ({
+              Quote: q.quoteNumber, Customer: q.customer?.companyName ?? '',
+              Status: q.status, Total: Number(q.totalAmount).toFixed(2), Date: new Date(q.createdAt).toLocaleDateString(),
+            })), 'quotations.csv')}>↓ Export CSV</Button>
+        } />
 
       <Flex gap={3} mb={5} flexWrap="wrap">
         <Box flex={{ base: '1 1 100%', md: 1 }} minW={0}>
           <SearchInput value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Search quotes, customer..." />
         </Box>
-        <select
-          value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '14px', color: '#374151', cursor: 'pointer', minWidth: '160px' }}
-        >
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+          style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', minWidth: 180, fontSize: 14 }}>
           <option value="">All Statuses</option>
-          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          {STATUSES.map(s => <option key={s} value={s}>{formatEnum(s)}</option>)}
         </select>
-        {(search || statusFilter) && (
-          <Button size="md" variant="ghost" colorPalette="gray" onClick={() => { setSearch(''); setStatusFilter(''); }}>Clear</Button>
-        )}
+        {(search || statusFilter) && <Button size="md" variant="ghost" onClick={() => { setSearch(''); setStatusFilter(''); }}>Clear</Button>}
       </Flex>
 
-      {paginated.length === 0 ? (
+      {loading ? (
+        <Text color="gray.400" fontSize="sm">Loading quotations…</Text>
+      ) : paginated.length === 0 ? (
         <EmptyState icon="💬" title="No quotations found" />
       ) : (
         <Box bg="white" rounded="xl" border="1px solid" borderColor="gray.100" shadow="sm" overflow="hidden">
           <Box overflowX="auto">
-            <Box as="table" w="full" style={{ borderCollapse: 'collapse', minWidth: '800px' }}>
+            <Box as="table" w="full" style={{ borderCollapse: 'collapse', minWidth: 800 }}>
               <Box as="thead" bg="gray.50" borderBottom="1px solid" borderColor="gray.100">
                 <Box as="tr">
-                  {['Quote #', 'RFQ #', 'Customer', 'Project', 'Amount', 'Valid Until', 'Assigned', 'Status'].map(h => (
-                    <Box key={h} as="th" px={4} py={3} textAlign="left" fontSize="xs" fontWeight={700} color="gray.500" textTransform="uppercase" letterSpacing="wide" whiteSpace="nowrap">{h}</Box>
+                  {['Quote #', 'RFQ #', 'Customer', 'Amount', 'Valid Until', 'Status'].map(h => (
+                    <Box key={h} as="th" px={4} py={3} textAlign="left" fontSize="xs" fontWeight={700} color="gray.500" textTransform="uppercase" letterSpacing="wide">{h}</Box>
                   ))}
                 </Box>
               </Box>
               <Box as="tbody">
                 {paginated.map(qt => (
-                  <Box
-                    as="tr" key={qt.id}
-                    borderTop="1px solid" borderColor="gray.50"
-                    _hover={{ bg: 'blue.50', cursor: 'pointer' }}
-                    transition="background 0.1s"
-                    onClick={() => { setSelected(qt); setDetailOpen(true); }}
-                  >
+                  <Box as="tr" key={qt.id} borderTop="1px solid" borderColor="gray.50" _hover={{ bg: 'blue.50', cursor: 'pointer' }} onClick={() => openDetail(qt)}>
                     <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700} color="green.700" fontFamily="mono">{qt.quoteNumber}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" fontFamily="mono" color="gray.400">{qt.rfqNumber}</Text></Box>
-                    <Box as="td" px={4} py={3}>
-                      <Text fontSize="sm" fontWeight={600}>{qt.customerName}</Text>
-                      <Text fontSize="xs" color="gray.400">{qt.companyName}</Text>
-                    </Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="sm" color="gray.700">{qt.projectName}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700}>₹{grandTotal(qt).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" color={new Date(qt.validUntil) < new Date() ? 'red.500' : 'gray.500'}>{qt.validUntil}</Text></Box>
-                    <Box as="td" px={4} py={3}><Text fontSize="xs" color="gray.600">{qt.assignedTo || '—'}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="xs" fontFamily="mono" color="gray.400">{qt.rfq?.rfqNumber ?? '—'}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={600}>{qt.customer?.companyName ?? '—'}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="sm" fontWeight={700}>{formatCurrency(Number(qt.totalAmount))}</Text></Box>
+                    <Box as="td" px={4} py={3}><Text fontSize="xs" color={qt.validUntil && new Date(qt.validUntil) < new Date() ? 'red.500' : 'gray.500'}>{qt.validUntil ? new Date(qt.validUntil).toLocaleDateString() : '—'}</Text></Box>
                     <Box as="td" px={4} py={3}><StatusBadge status={qt.status} /></Box>
                   </Box>
                 ))}
@@ -187,143 +177,123 @@ export default function AdminQuotationsPage() {
       )}
       <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
-      <SidePanel
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        title={
-          selected && (
-            <HStack gap={2} flexWrap="wrap">
-              <Text fontWeight={800} fontFamily="mono" fontSize="sm" color="green.700">{selected.quoteNumber}</Text>
-              <StatusBadge status={selected.status} />
-              <Button size="xs" variant="outline" colorPalette="gray"
-                onClick={() => window.open(`/admin/quotations/${selected.id}/print`, '_blank')}>
-                🖨 PDF
-              </Button>
-            </HStack>
-          )
-        }
-      >
+      <SidePanel open={detailOpen} onClose={() => setDetailOpen(false)}
+        title={selected && (
+          <HStack gap={2} flexWrap="wrap">
+            <Text fontWeight={800} fontFamily="mono" fontSize="sm" color="green.700">{selected.quoteNumber}</Text>
+            <StatusBadge status={selected.status} />
+          </HStack>
+        )}>
         {selected && (
           <VStack gap={5} align="stretch">
             <SimpleGrid columns={2} gap={3}>
-              {[['Customer', selected.customerName], ['Company', selected.companyName], ['Project', selected.projectName], ['RFQ Ref', selected.rfqNumber], ['Valid Until', selected.validUntil], ['Assigned', selected.assignedTo || '—']].map(([l, v]) => (
-                <Box key={l}><Text fontSize="10px" color="gray.400" mb={0.5}>{l}</Text><Text fontSize="sm" fontWeight={600} color="gray.800">{v}</Text></Box>
-              ))}
+              <Box><Text fontSize="10px" color="gray.400">Customer</Text><Text fontSize="sm" fontWeight={600}>{selected.customer?.companyName ?? '—'}</Text></Box>
+              <Box><Text fontSize="10px" color="gray.400">RFQ Ref</Text><Text fontSize="sm" fontWeight={600}>{selected.rfq?.rfqNumber ?? '—'}</Text></Box>
+              <Box><Text fontSize="10px" color="gray.400">Valid Until</Text><Text fontSize="sm" fontWeight={600}>{selected.validUntil ? new Date(selected.validUntil).toLocaleDateString() : '—'}</Text></Box>
+              <Box><Text fontSize="10px" color="gray.400">Created</Text><Text fontSize="sm" fontWeight={600}>{new Date(selected.createdAt).toLocaleDateString()}</Text></Box>
             </SimpleGrid>
             <Separator />
             <Box>
-              <Text fontWeight={700} fontSize="xs" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="widest">Products</Text>
+              <Text fontWeight={700} fontSize="xs" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="widest">Line Items</Text>
               <VStack gap={2} align="stretch">
-                {selected.lineItems.map(li => {
-                  const p = products.find(x => x.id === li.productId);
-                  const b = brands.find(x => x.id === p?.brandId);
-                  return (
-                    <Flex key={li.productId} justify="space-between" align="center" bg="gray.50" rounded="lg" px={3} py={2.5} gap={2}>
-                      <Box minW={0}>
-                        <Text fontSize="sm" fontWeight={600} color="gray.800">{p?.name}</Text>
-                        <Text fontSize="xs" color="gray.400">{b?.name} · Qty {li.quantity}</Text>
-                      </Box>
-                      <Box textAlign="right" flexShrink={0}>
-                        <Text fontSize="xs" color="gray.400">₹{li.basePrice} -{li.discount}% +{li.tax}%</Text>
-                        <Text fontSize="sm" fontWeight={700} color="gray.800">₹{lineTotal(li).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
-                      </Box>
-                    </Flex>
-                  );
-                })}
+                {(selected.items ?? []).map((li, i) => (
+                  <Flex key={i} justify="space-between" bg="gray.50" rounded="lg" px={3} py={2.5}>
+                    <Box>
+                      <Text fontSize="sm" fontWeight={600}>{li.productNameSnapshot ?? '—'}</Text>
+                      <Text fontSize="xs" color="gray.400">Qty {String(li.quantity)} · ₹{Number(li.unitPrice).toLocaleString()} · Disc {String(li.discountPercent ?? 0)}% · Tax {String(li.taxPercent ?? 0)}%</Text>
+                    </Box>
+                    <Text fontSize="sm" fontWeight={700}>{formatCurrency(Number(li.lineTotal))}</Text>
+                  </Flex>
+                ))}
               </VStack>
               <Flex justify="flex-end" mt={3}>
-                <VStack align="stretch" minW="200px" gap={1} bg="blue.50" p={3} rounded="xl">
-                  <Flex justify="space-between"><Text fontSize="xs" color="gray.500">Delivery</Text><Text fontSize="xs" fontWeight={600}>₹{selected.deliveryCharges.toLocaleString()}</Text></Flex>
-                  <Flex justify="space-between"><Text fontWeight={700} fontSize="sm">Total</Text><Text fontWeight={800} fontSize="sm" color="blue.700">₹{grandTotal(selected).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text></Flex>
-                </VStack>
+                <Box bg="blue.50" p={3} rounded="xl" minW="200px">
+                  <Flex justify="space-between"><Text fontSize="xs">Delivery</Text><Text fontSize="xs">{formatCurrency(Number(selected.deliveryCharges))}</Text></Flex>
+                  <Flex justify="space-between"><Text fontWeight={700}>Total</Text><Text fontWeight={800} color="blue.700">{formatCurrency(Number(selected.totalAmount))}</Text></Flex>
+                </Box>
               </Flex>
             </Box>
             <Separator />
             <Box>
-              <Text fontWeight={700} fontSize="xs" color="gray.400" mb={3} textTransform="uppercase" letterSpacing="widest">Actions</Text>
+              <Text fontWeight={700} fontSize="xs" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="widest">Actions</Text>
               <VStack gap={2} align="stretch">
-                {selected.status === 'Draft' && (
-                  <Button colorPalette="blue" rounded="xl" onClick={() => setWhatsappOpen(true)}>💬 Share Quote via WhatsApp</Button>
-                )}
-                {['Shared', 'Follow-Up', 'Negotiation'].includes(selected.status) && (
-                  <VStack gap={2} align="stretch">
+                {selected.status === 'DRAFT' && <Button colorPalette="blue" onClick={() => setStatus(selected, 'SHARED')}>Share with Customer</Button>}
+                {(['SHARED', 'FOLLOW_UP', 'NEGOTIATION'] as string[]).includes(selected.status) && (
+                  <>
+                    <Button colorPalette="orange" variant="outline" onClick={() => setStatus(selected, 'FOLLOW_UP')}>Mark Follow-Up</Button>
                     <HStack gap={2}>
-                      <Button colorPalette="green" flex={1} rounded="xl" onClick={markWon}>🏆 Won — Create SO</Button>
-                      <Button colorPalette="red" variant="outline" flex={1} rounded="xl" onClick={() => setLostOpen(true)}>✗ Mark Lost</Button>
+                      <Button colorPalette="green" flex={1} onClick={() => setStatus(selected, 'ACCEPTED')}>🏆 Mark Won</Button>
+                      <Button colorPalette="red" variant="outline" flex={1} onClick={() => setLostOpen(true)}>✗ Mark Lost</Button>
                     </HStack>
-                    <Button variant="outline" colorPalette="purple" size="sm" onClick={createRevision}>📋 Create Revision</Button>
-                  </VStack>
+                  </>
                 )}
-                {['Draft', 'Expired'].includes(selected.status) && (
-                  <Button variant="outline" colorPalette="purple" size="sm" onClick={createRevision}>📋 Create Revision</Button>
+                {selected.status === 'ACCEPTED' && (
+                  <Button colorPalette="teal" onClick={() => openConvert(selected)}>Convert to Sales Order →</Button>
                 )}
-                {selected.status === 'Accepted' && (
-                  <Box p={3} bg="green.50" rounded="xl" border="1px solid" borderColor="green.200">
-                    <Text fontWeight={700} color="green.700">✅ Won — Sales Order Created</Text>
+                {selected.status === 'CONVERTED_TO_SO' && (
+                  <Box p={3} bg="teal.50" rounded="xl" border="1px solid" borderColor="teal.200">
+                    <Text fontWeight={700} color="teal.700">✅ Converted to Sales Order</Text>
+                    <Link href="/admin/sales-orders"><Text fontSize="xs" color="teal.700" mt={1}>View sales orders →</Text></Link>
                   </Box>
                 )}
-                {selected.status === 'Rejected' && (
+                {selected.status === 'REJECTED' && (
                   <Box p={3} bg="red.50" rounded="xl" border="1px solid" borderColor="red.200">
                     <Text fontWeight={700} color="red.700">✗ Lost</Text>
-                    {selected.lostReason && <Text fontSize="xs" color="red.600" mt={1}>Reason: {selected.lostReason}</Text>}
+                    {selected.rejectionReason && <Text fontSize="xs" color="red.600" mt={1}>Reason: {selected.rejectionReason}</Text>}
                   </Box>
                 )}
               </VStack>
             </Box>
-            <Box bg="gray.50" rounded="xl" p={3}>
-              <Text fontSize="10px" color="gray.400" fontWeight={600} mb={1}>TERMS</Text>
-              <Text fontSize="xs" color="gray.600">{selected.terms}</Text>
-            </Box>
+            {selected.termsAndConditions && (
+              <Box bg="gray.50" rounded="xl" p={3}>
+                <Text fontSize="10px" color="gray.400" fontWeight={600} mb={1}>TERMS</Text>
+                <Text fontSize="xs" color="gray.600" whiteSpace="pre-line">{selected.termsAndConditions}</Text>
+              </Box>
+            )}
           </VStack>
         )}
       </SidePanel>
 
-      {/* WhatsApp Dialog — responsive */}
-      <DialogRoot open={whatsappOpen} onOpenChange={d => setWhatsappOpen(d.open)}>
-        <DialogBackdrop />
-        <DialogContent maxW={{ base: '95vw', md: '520px' }} mx="auto">
-          <DialogHeader><Text fontWeight={700}>Share via WhatsApp</Text><DialogCloseTrigger /></DialogHeader>
-          <DialogBody>
-            {selected && (
-              <>
-                <Text fontSize="sm" color="gray.600" mb={3}>Message preview:</Text>
-                <Box bg="green.50" rounded="lg" p={4} border="1px solid" borderColor="green.200">
-                  <Text fontSize="sm" color="gray.700" whiteSpace="pre-line">
-                    {`Dear ${selected.customerName},\n\nYour quotation ${selected.quoteNumber} for project "${selected.projectName}" is ready.\n\nPlease review and confirm.\n\nRef: ${selected.rfqNumber}\nValid Until: ${selected.validUntil}\n\nThank you,\nEleCom Lighting`}
-                  </Text>
-                </Box>
-              </>
-            )}
-          </DialogBody>
-          <DialogFooter gap={3}>
-            <Button variant="ghost" onClick={() => setWhatsappOpen(false)}>Cancel</Button>
-            <Button colorPalette="green" onClick={shareWhatsapp}>💬 Send via WhatsApp</Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
-
-      {/* Lost Reason Dialog — responsive */}
       <DialogRoot open={lostOpen} onOpenChange={d => setLostOpen(d.open)}>
         <DialogBackdrop />
-        <DialogContent maxW={{ base: '95vw', md: '480px' }} mx="auto">
-          <DialogHeader><Text fontWeight={700}>Mark as Lost</Text><DialogCloseTrigger /></DialogHeader>
+        <DialogContent maxW={{ base: '95vw', md: '520px' }} mx="auto">
+          <DialogHeader><Text fontWeight={700}>Mark Quote as Lost</Text><DialogCloseTrigger /></DialogHeader>
           <DialogBody>
-            <Field.Root mb={4}>
-              <Field.Label fontSize="sm" fontWeight={600}>Reason <Text as="span" color="red.500">*</Text></Field.Label>
-              <select value={lostReason} onChange={e => setLostReason(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px' }}>
-                <option value="">Select reason…</option>
-                {LOST_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </Field.Root>
             <Field.Root>
-              <Field.Label fontSize="sm" fontWeight={600}>Remarks</Field.Label>
-              <Textarea value={lostRemarks} onChange={e => setLostRemarks(e.target.value)} placeholder="Additional notes..." rows={3} />
+              <Field.Label fontSize="sm" fontWeight={600}>Reason</Field.Label>
+              <Textarea value={lostReason} onChange={e => setLostReason(e.target.value)} rows={3} placeholder="Optional" />
             </Field.Root>
           </DialogBody>
           <DialogFooter gap={3}>
             <Button variant="ghost" onClick={() => setLostOpen(false)}>Cancel</Button>
-            <Button colorPalette="red" onClick={markLost} disabled={!lostReason}>Mark as Lost</Button>
+            <Button colorPalette="red" onClick={submitLost}>Mark Lost</Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
+
+      <DialogRoot open={convertOpen} onOpenChange={d => setConvertOpen(d.open)}>
+        <DialogBackdrop />
+        <DialogContent maxW={{ base: '95vw', md: '580px' }} mx="auto">
+          <DialogHeader><Text fontWeight={700}>Convert to Sales Order</Text><DialogCloseTrigger /></DialogHeader>
+          <DialogBody>
+            <VStack gap={4} align="stretch">
+              <Field.Root><Field.Label fontSize="sm">Customer PO Number</Field.Label>
+                <Input value={customerPoNumber} onChange={e => setCustomerPoNumber(e.target.value)} placeholder="Optional" />
+              </Field.Root>
+              <Field.Root><Field.Label fontSize="sm">Due Date</Field.Label>
+                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+              </Field.Root>
+              <Field.Root><Field.Label fontSize="sm">Billing Address</Field.Label>
+                <Textarea rows={2} value={billingAddress} onChange={e => setBillingAddress(e.target.value)} />
+              </Field.Root>
+              <Field.Root><Field.Label fontSize="sm">Shipping Address</Field.Label>
+                <Textarea rows={2} value={shippingAddress} onChange={e => setShippingAddress(e.target.value)} />
+              </Field.Root>
+            </VStack>
+          </DialogBody>
+          <DialogFooter gap={3}>
+            <Button variant="ghost" onClick={() => setConvertOpen(false)}>Cancel</Button>
+            <Button colorPalette="teal" onClick={submitConvert} loading={converting}>Create Sales Order</Button>
           </DialogFooter>
         </DialogContent>
       </DialogRoot>

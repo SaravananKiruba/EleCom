@@ -1,42 +1,46 @@
 'use client';
 
 import { Badge } from '@chakra-ui/react';
-
-type StatusType = string;
+import { formatEnum } from '@/utils/format';
 
 const colorMap: Record<string, string> = {
-  New: 'blue',
-  'Under Review': 'orange',
-  'Quote Ready': 'purple',
-  'Follow-Up': 'yellow',
-  Accepted: 'green',
-  Rejected: 'red',
-  Expired: 'gray',
-  Draft: 'gray',
-  'Pending Approval': 'orange',
-  Approved: 'green',
-  Shared: 'blue',
-  Negotiation: 'purple',
-  'Converted to PO': 'teal',
-  'Converted to SO': 'teal',
-  Scheduled: 'blue',
-  Completed: 'green',
-  Overdue: 'red',
-  Cancelled: 'gray',
-  Pending: 'orange',
-  Suspended: 'red',
-  Active: 'green',
-  Inactive: 'gray',
-  Won: 'green',
-  Lost: 'red',
-  Delivered: 'teal',
+  // RFQ / Quote / Order status
+  NEW: 'blue',
+  UNDER_REVIEW: 'orange',
+  QUOTE_READY: 'purple',
+  FOLLOW_UP: 'yellow',
+  ACCEPTED: 'green',
+  REJECTED: 'red',
+  EXPIRED: 'gray',
+  DRAFT: 'gray',
+  SHARED: 'blue',
+  NEGOTIATION: 'purple',
+  CONVERTED_TO_SO: 'teal',
+  DISPATCHED: 'blue',
+  DELIVERED: 'teal',
+  CANCELLED: 'gray',
+  // Follow-up
+  OPEN: 'blue',
+  COMPLETED: 'green',
+  // Users / customers / architects / tenants
+  ACTIVE: 'green',
+  INACTIVE: 'gray',
+  SUSPENDED: 'red',
+  BLOCKED: 'red',
+  LEAD: 'orange',
+  PROSPECT: 'orange',
+  PENDING_APPROVAL: 'orange',
+  // Subscriptions
+  TRIAL: 'purple',
+  GRACE_PERIOD: 'orange',
 };
 
-export function StatusBadge({ status }: { status: StatusType }) {
-  const color = colorMap[status] || 'gray';
+export function StatusBadge({ status }: { status: string }) {
+  const key = status?.toUpperCase().replace(/\s+/g, '_') ?? '';
+  const color = colorMap[key] ?? 'gray';
   return (
     <Badge colorPalette={color} variant="subtle" size="sm" borderRadius="full" px={2} py={0.5} fontWeight={500} fontSize="xs">
-      {status}
+      {formatEnum(status)}
     </Badge>
   );
 }

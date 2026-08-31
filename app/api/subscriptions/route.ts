@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/server/prisma';
+import { requireRole, isResponse } from '@/src/server/auth';
 
 export async function GET(req: NextRequest) {
+  const auth = requireRole(req, ['SAAS_ADMIN']);
+  if (isResponse(auth)) return auth;
+
   const { searchParams } = req.nextUrl;
   const status = searchParams.get('status');
 
