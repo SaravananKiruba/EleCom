@@ -98,6 +98,17 @@ export default function LoginPage() {
             </Button>
           </VStack>
         </Box>
+
+        <VStack gap={2} mt={4}>
+          <Text fontSize="sm" color="gray.500">
+            New customer?{' '}
+            <Link href="/signup" style={{ color: '#6b8375', fontWeight: 600 }}>Create account</Link>
+          </Text>
+          <Text fontSize="sm" color="gray.500">
+            Architect partner?{' '}
+            <Link href="/architect-partner" style={{ color: '#6b8375', fontWeight: 600 }}>Register here</Link>
+          </Text>
+        </VStack>
       </Box>
     </Box>
   );
