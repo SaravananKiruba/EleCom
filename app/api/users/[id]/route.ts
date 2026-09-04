@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/server/prisma';
 import { requireTenant, isResponse } from '@/src/server/auth';
 
+// PATCH /api/users/[id] — update a team member's membership status
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = requireTenant(req);
   if (isResponse(auth)) return auth;
@@ -10,8 +11,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   const { id } = await params;
   const { status } = await req.json();
-  const user = await prisma.user.findUnique({ where: { id } });
-  if (!user || user.tenantId !== auth.tenantId) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  const updated = await prisma.user.update({ where: { id }, data: { status } });
-  return NextResponse.json({ id: updated.id, status: updated.status });
+
+  const membership = await prisma.userTenantMembership.findFirst({
+    where: { userId: id, tenantId: auth.tenantId! },
+  });
+  if (!membership) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const updated = await prisma.userTenantMembership.update({
+    where: { id: membership.id },
+    data: { status },
+  });
+  return NextResponse.json({ id, membershipId: updated.id, status: updated.status });
 }

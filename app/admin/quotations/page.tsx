@@ -35,6 +35,8 @@ export default function AdminQuotationsPage() {
   const [shippingAddress, setShippingAddress] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [converting, setConverting] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareResult, setShareResult] = useState<{ shareUrl: string } | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -61,6 +63,7 @@ export default function AdminQuotationsPage() {
   const openDetail = async (q: Quote) => {
     const full = await fetch(`/api/quotes/${q.id}`).then(r => r.ok ? r.json() : q);
     setSelected(full);
+    setShareResult(null);
     setDetailOpen(true);
   };
 
@@ -94,6 +97,21 @@ export default function AdminQuotationsPage() {
     setShippingAddress('');
     setDueDate('');
     setConvertOpen(true);
+  };
+
+  const shareQuote = async (q: Quote) => {
+    setShareLoading(true);
+    try {
+      const res = await fetch(`/api/quotes/${q.id}/share`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { toaster.create({ title: data.error ?? 'Share failed', type: 'error', duration: 3000 }); return; }
+      setShareResult({ shareUrl: data.shareUrl });
+      setSelected(prev => prev ? { ...prev, status: 'SHARED', quoteToken: data.quoteToken } : prev);
+      toaster.create({ title: 'Quote shared! Copy the link below.', type: 'success', duration: 3000 });
+      load();
+    } finally {
+      setShareLoading(false);
+    }
   };
 
   const submitConvert = async () => {
@@ -214,12 +232,41 @@ export default function AdminQuotationsPage() {
               </Flex>
             </Box>
             <Separator />
-            <Box>
+              <Box>
               <Text fontWeight={700} fontSize="xs" color="gray.400" mb={2} textTransform="uppercase" letterSpacing="widest">Actions</Text>
               <VStack gap={2} align="stretch">
-                {selected.status === 'DRAFT' && <Button colorPalette="blue" onClick={() => setStatus(selected, 'SHARED')}>Share with Customer</Button>}
+                {selected.status === 'DRAFT' && (
+                  <Button colorPalette="blue" onClick={() => shareQuote(selected)} loading={shareLoading}>📤 Share with Customer</Button>
+                )}
+                {shareResult && (
+                  <Box bg="blue.50" rounded="xl" p={3} border="1px solid" borderColor="blue.200">
+                    <Text fontSize="xs" fontWeight={700} color="blue.700" mb={2}>Share link ready</Text>
+                    <Box bg="white" rounded="lg" p={2} mb={2} border="1px solid" borderColor="blue.100" overflowX="auto">
+                      <Text fontSize="xs" fontFamily="mono" color="gray.700" wordBreak="break-all">{shareResult.shareUrl}</Text>
+                    </Box>
+                    <HStack gap={2}>
+                      <Button size="xs" variant="outline" colorPalette="blue" flex={1}
+                        onClick={() => { navigator.clipboard.writeText(shareResult.shareUrl); toaster.create({ title: 'Copied!', type: 'info', duration: 1500 }); }}>
+                        📋 Copy Link
+                      </Button>
+                      <Box as="a"
+                        href={`https://wa.me/?text=${encodeURIComponent(`Hi, your quote ${selected.quoteNumber} is ready. View it here: ${shareResult.shareUrl}`)}`}
+                        target="_blank" rel="noopener noreferrer" flex={1}>
+                        <Button size="xs" colorPalette="green" w="full">📱 WhatsApp</Button>
+                      </Box>
+                    </HStack>
+                  </Box>
+                )}
                 {(['SHARED', 'FOLLOW_UP', 'NEGOTIATION'] as string[]).includes(selected.status) && (
                   <>
+                    {/* Re-share: show WhatsApp if token exists */}
+                    {(selected as Quote & { quoteToken?: string }).quoteToken && (
+                      <Box as="a"
+                        href={`https://wa.me/?text=${encodeURIComponent(`Hi, your quote ${selected.quoteNumber} is ready. View it here: ${typeof window !== 'undefined' ? window.location.origin : ''}/store/${selected.tenantId}/quotation/${selected.id}?token=${(selected as Quote & { quoteToken?: string }).quoteToken}`)}`}
+                        target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" colorPalette="green" variant="outline" w="full">📱 Re-send on WhatsApp</Button>
+                      </Box>
+                    )}
                     <Button colorPalette="orange" variant="outline" onClick={() => setStatus(selected, 'FOLLOW_UP')}>Mark Follow-Up</Button>
                     <HStack gap={2}>
                       <Button colorPalette="green" flex={1} onClick={() => setStatus(selected, 'ACCEPTED')}>🏆 Mark Won</Button>

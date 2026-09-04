@@ -17,14 +17,16 @@ export interface Tenant {
 }
 
 export type UserRole = 'SAAS_ADMIN' | 'TENANT_ADMIN' | 'SALES' | 'CUSTOMER' | 'ARCHITECT';
+export type MembershipRole = 'TENANT_ADMIN' | 'SALES' | 'CUSTOMER' | 'ARCHITECT';
 
 export interface UserRecord {
   id: string;
-  tenantId?: string;
+  membershipId?: string;
   name: string;
   email: string;
   role: UserRole;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  discountPercent?: number | null;
   lastLoginAt?: string;
   createdAt: string;
 }
@@ -148,9 +150,11 @@ export interface Quote {
   id: string;
   tenantId: string;
   quoteNumber: string;
+  quoteToken?: string | null;
   version?: number;
   rfqId?: string | null;
   customerId: string;
+  architectId?: string | null;
   status: QuoteStatus;
   validUntil?: string | null;
   currency?: string;

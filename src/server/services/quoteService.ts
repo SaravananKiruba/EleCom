@@ -64,7 +64,7 @@ export async function createQuote(input: CreateQuoteInput) {
       rfqId: input.rfqId,
       customerId: input.customerId,
       quoteNumber,
-      status: QuoteStatus.SHARED,
+      status: QuoteStatus.DRAFT,   // admin reviews before sharing
       validUntil: input.validUntil,
       currency: 'INR',
       subtotal: new Prisma.Decimal(subtotal),
@@ -74,7 +74,6 @@ export async function createQuote(input: CreateQuoteInput) {
       totalAmount: new Prisma.Decimal(totalAmount),
       notes: input.notes,
       termsAndConditions: input.termsAndConditions,
-      sharedAt: new Date(),
       createdById: input.createdById,
       items: {
         create: computed.map((item) => ({

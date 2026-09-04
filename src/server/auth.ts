@@ -34,6 +34,7 @@ export interface AuthUser {
   tenantSlug?: string;
   customerId?: string;
   architectId?: string;
+  discountPercent?: number; // architect's discount for the current tenant context
 }
 
 export function readToken(req: NextRequest): AuthUser | null {
