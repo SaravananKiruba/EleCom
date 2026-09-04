@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Flex, Text, VStack, HStack, IconButton, Badge } from '@chakra-ui/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, ReactNode } from 'react';
@@ -32,8 +33,8 @@ function SidebarContent({ pathname, badges, onClose, onLogout }: {
     <Box h="full" display="flex" flexDirection="column">
       <Box p={5} borderBottom="1px solid" borderColor="gray.100">
         <Link href="/admin" style={{ textDecoration: 'none' }} onClick={onClose}>
-          <HStack gap={2}>
-            <Box bg="blue.600" color="white" rounded="lg" w={8} h={8} display="flex" alignItems="center" justifyContent="center" fontSize="sm" fontWeight={700}>⚡</Box>
+          <HStack gap={2} align="center">
+            <Image src="/crmboo-logo.png" alt="CRMBoo" width={36} height={36} style={{ borderRadius: 8 }} />
             <Box>
               <Text fontWeight={800} fontSize="sm" color="gray.900">CRMBoo Admin</Text>
               <Text fontSize="10px" color="gray.400">CRM Platform</Text>

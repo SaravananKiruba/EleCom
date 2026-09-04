@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Text, Button, VStack, HStack, Input, Field } from '@chakra-ui/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -72,6 +73,11 @@ function SignupContent() {
     <Box minH="100vh" bg="gray.50" display="flex" alignItems="center" justifyContent="center" px={4} py={10}>
       <Box w="full" maxW="480px">
         <Box textAlign="center" mb={8}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <Box display="flex" justifyContent="center" mb={4}>
+              <Image src="/crmboo-logo.png" alt="CRMBoo" width={80} height={80} priority style={{ borderRadius: 14 }} />
+            </Box>
+          </Link>
           <Text fontSize="2xl" fontWeight={700} color="gray.900">Create Account</Text>
           <Text fontSize="sm" color="gray.500" mt={1}>Sign up to browse products and submit quote requests</Text>
         </Box>

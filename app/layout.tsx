@@ -4,6 +4,15 @@ import { Providers } from './providers';
 export const metadata: Metadata = {
   title: 'CRMBoo — B2B Lighting CRM & E-Commerce',
   description: 'Multi-tenant B2B sales platform and CRM for lighting and electrical products.',
+  icons: {
+    icon: '/crmboo-logo.png',
+    apple: '/crmboo-logo.png',
+  },
+  openGraph: {
+    title: 'CRMBoo',
+    description: 'Multi-tenant B2B sales platform and CRM for lighting and electrical products.',
+    images: [{ url: '/crmboo-logo.png', width: 1080, height: 1080, alt: 'CRMBoo' }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Flex, HStack, Text, VStack, Badge, IconButton } from '@chakra-ui/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -20,8 +21,8 @@ function SidebarContent({ pathname, pendingCount, onClose, onLogout }: {
     <Box h="full" display="flex" flexDirection="column" bg="gray.900">
       <Box px={5} py={5} borderBottom="1px solid" borderColor="gray.700">
         <Link href="/saas-admin" style={{ textDecoration: 'none' }} onClick={onClose}>
-          <HStack gap={2}>
-            <Box bg="orange.500" color="white" rounded="lg" w={8} h={8} display="flex" alignItems="center" justifyContent="center" fontSize="sm" fontWeight={700}>⚡</Box>
+          <HStack gap={2} align="center">
+            <Image src="/crmboo-logo.png" alt="CRMBoo" width={36} height={36} style={{ borderRadius: 8 }} />
             <Box>
               <Text fontWeight={800} fontSize="sm" color="white">CRMBoo</Text>
               <Text fontSize="10px" color="gray.400">SaaS Platform</Text>

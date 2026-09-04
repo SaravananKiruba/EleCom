@@ -1,85 +1,125 @@
 @AGENTS.md
 
-# EleCom Project — What's Been Built
+# EleCom Project — Current Snapshot
 
 ## Stack
-- **Next.js 16** (App Router) + **TypeScript** + **Chakra UI v3**
-- Pure frontend demo — no backend, localStorage persistence via `AppContext`
-- Dev: `npm run dev` → http://localhost:3000 | Build: `npm run build`
+- **Next.js 16** (App Router) + **TypeScript** + **React 19** + **Chakra UI v3**
+- **Prisma 5** + **MySQL** backend with API routes under `app/api/*`
+- Auth/session helpers in `src/server/auth.ts` with `jsonwebtoken` + `bcryptjs`
+- Dev: `npm run dev` | Build: `npm run build` (runs `prisma generate` first)
 
-## Domain
-Lighting company (LED panels, downlights, battens, bulbs, track lights, high bay, flood, street lights).  
-Brand: CVS — theme colors `#6b8375`, `#92b29b`, `#c6e3c5` overriding Chakra blue palette.
+## Product Shape
+- Multi-tenant SaaS for electrical/lighting CRM + quote-to-order workflows.
+- Three major surfaces:
+  - Public marketing and onboarding
+  - Tenant admin operations (`/admin/*`)
+  - Tenant storefront (`/store/[tenantSlug]/*`)
+- Separate SaaS owner console at `/saas-admin/*` for tenant/subscription management.
 
-## Route Structure
+## App Route Structure
 ```
-/(public)/          → PublicLayout (header + footer)
-  /                 → HomePage (landing)
-  /catalogue        → Product catalogue with filters
-  /products/[slug]  → Product detail
-  /quote-cart       → Quote cart (add items before RFQ)
-  /rfq              → Submit RFQ form
-  /quotation/[id]   → View shared quote
-  /dashboard        → Customer dashboard (orders, quotes)
-  /architect-partner → Architect programme info / registration
+/(public)/
+  /                     → Public homepage
+  /architect-partner    → Architect partner landing
+  /architect-portal     → Architect portal page
 
-/admin/             → AdminLayout (sidebar nav)
-  /                 → KPI dashboard
-  /rfqs             → Manage RFQs
-  /quotations       → Manage quotes
-  /purchase-orders  → Manage sales orders (SOs)
-  /follow-ups       → Follow-up tracker
-  /customers        → Customer CRM
-  /architects       → Architect partner management
-  /products         → Product catalogue admin
-  /reports          → Reports page
+/login                  → Login page
+/signup                 → Signup page
+/join                   → Join page
 
-/login/             → Login page
+/admin/
+  /                     → Tenant admin dashboard
+  /rfqs                 → RFQ management
+  /quotations           → Quote management
+  /sales-orders         → Sales order management
+  /follow-ups           → Follow-up tracker
+  /customers            → Customer CRM
+  /architects           → Architect management
+  /products             → Product catalog admin
+  /reports              → Reports
+  /audit                → Audit logs page
+  /settings             → Tenant settings
+  /team                 → Team/users page
+
+/saas-admin/
+  /                     → SaaS admin dashboard
+  /tenants              → Tenant management
+  /subscriptions        → Subscription management
+
+/store/[tenantSlug]/
+  /                     → Tenant store landing
+  /catalogue            → Product catalogue
+  /products/*           → Product pages
+  /quote-cart           → Tenant-scoped quote cart
+  /rfq                  → RFQ submission
+  /quotation/*          → Shared quote views
+  /dashboard            → Customer dashboard
 ```
 
-## Auth — `/context/AuthContext.tsx`
-Roles: `guest` | `customer` | `architect` | `admin`
+## API Surface (App Router)
+- Core business APIs:
+  - `/api/products`, `/api/categories`, `/api/brands`
+  - `/api/customers`, `/api/architects`, `/api/rfqs`, `/api/quotes`
+  - `/api/follow-ups`, `/api/sales-orders`
+- Platform APIs:
+  - `/api/tenants`, `/api/subscriptions`, `/api/users`
+  - `/api/audit-logs`, `/api/activities`
+- Auth APIs:
+  - `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/signup`, `/api/auth/join`
+- Store resolution APIs:
+  - `/api/store/[tenantSlug]`, `/api/store/by-domain`, `/api/store/domains`, `/api/store/settings`
 
-## State — `/context/AppContext.tsx`
-Manages all entities in memory + localStorage. Key actions include `UPDATE_PO`.
+## Auth and Roles
+- Client auth context: `context/AuthContext.tsx`
+- Supported roles:
+  - `SAAS_ADMIN`
+  - `TENANT_ADMIN`
+  - `SALES`
+  - `CUSTOMER`
+  - `ARCHITECT`
+  - `guest` (client fallback user)
 
-## Data Model — `/types/index.ts`
-| Type | Key fields |
-|------|-----------|
-| `Product` | sku, slug, brandId, categoryId, specifications, variants, documents |
-| `RFQ` | rfqNumber, customerId, items[], status, timeline[] |
-| `Quote` | quoteNumber, rfqId, lineItems[], status, sharedAt |
-| `PurchaseOrder` | poNumber, soNumber, dispatchDate, dueDate, trackingId, status |
-| `FollowUp` | quoteId, method, lastContact, nextFollowUp, status |
-| `Customer` | companyName, gst, city, status |
-| `Architect` | firmName, licenseNumber, discount, discountHistory[] |
+## State Management
+- `context/AppContext.tsx`
+  - Now focused on tenant-scoped quote-cart state in localStorage (`crmboo:cart:v2`).
+  - Carts are isolated per tenant slug (`cartsByTenant`).
+- `context/TenantStoreContext.tsx`
+  - Loads and provides current tenant storefront metadata from `/api/store/[slug]`.
 
-### Enums
-- `RFQStatus`: New | Under Review | Quote Ready | Follow-Up | Accepted | Rejected | Expired
-- `QuoteStatus`: Draft | Shared | Follow-Up | Negotiation | Accepted | Rejected | Expired | **Converted to SO** (no "Pending Approval" or "Converted to PO")
-- `POStatus`: Active | Dispatched | Delivered | Cancelled
-- Quote flow: RFQ → Quote (auto-Shared, no approval step) → Won → Sales Order (SO)
+## Data Model
+- UI types in `types/index.ts` are aligned with Prisma enums (UPPER_SNAKE_CASE).
+- Core entities include:
+  - `Tenant`, `UserRecord`
+  - `Product`, `Category`, `Brand`
+  - `Customer`, `Architect`
+  - `RFQ`, `Quote`, `SalesOrder`, `FollowUp`
+- Server schema is in `prisma/schema.prisma` with tenant-aware relations and audit/subscription tables.
 
-## Shared UI Components — `/components/ui/`
-- `SidePanel` — all admin detail panels (NOT Chakra DrawerRoot)
-- `StatusBadge` — coloured badge per status value
-- `KPICard` — metric cards for dashboard
-- `PageHeader` — page title + action button
-- `SearchInput` — debounced search box
-- `Pagination` — page controls
-- `EmptyState` — zero-results placeholder
-- `Toaster` — Chakra v3 toaster (children render fn)
+### Workflow Enums (high-signal)
+- `RFQStatus`: `NEW`, `UNDER_REVIEW`, `QUOTE_READY`, `FOLLOW_UP`, `ACCEPTED`, `REJECTED`, `EXPIRED`
+- `QuoteStatus`: `DRAFT`, `SHARED`, `FOLLOW_UP`, `NEGOTIATION`, `ACCEPTED`, `REJECTED`, `EXPIRED`, `CONVERTED_TO_SO`
+- `SalesOrderStatus`: `ACTIVE`, `DISPATCHED`, `DELIVERED`, `CANCELLED`
 
-## Layout Components — `/components/layout/`
-- `PublicHeader`, `PublicFooter`
+## Shared UI Components
+- In `components/ui/`:
+  - `ActivityTimeline`
+  - `EmptyState`
+  - `KPICard`
+  - `PageHeader`
+  - `Pagination`
+  - `SearchInput`
+  - `SidePanel`
+  - `StatusBadge`
+  - `toaster`
 
-## Chakra UI v3 Conventions
-- `createSystem` + `ChakraProvider value={system}`
-- `DialogRoot`, `DrawerRoot`, `TabsRoot`
-- `DialogContent` always includes `maxW={{ base: '95vw', md: '520px' }} mx="auto"`
-- Admin layout mobile nav: pure CSS slide panel (NOT DrawerRoot)
-- Table rows: clickable via `onClick` + `cursor: pointer` (no separate "View" button)
+## Layout Components
+- In `components/layout/`:
+  - `PublicHeader`
+  - `PublicFooter`
+  - `StoreHeader`
 
-## Mock Data — `/data/mockData.ts`
-Seed data for all entities (products, RFQs, quotes, customers, architects, POs, follow-ups).
+## Server Utilities
+- Tenant/auth/server infrastructure under `src/server/`:
+  - `prisma.ts`, `auth.ts`, `resolveTenant.ts`, `tenantContext.ts`, `vercelApi.ts`
+  - Service layer in `src/server/services/*` for RFQs, quotes, orders, products, customers, follow-ups, audit, sequences, and tenants.
 

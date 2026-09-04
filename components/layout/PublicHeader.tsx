@@ -3,6 +3,7 @@
 import { Box, Flex, HStack, Text, Button, IconButton, VStack, Separator,
   DrawerRoot, DrawerBackdrop, DrawerContent, DrawerHeader, DrawerBody, DrawerCloseTrigger,
 } from '@chakra-ui/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,8 +26,8 @@ export function PublicHeader() {
       <Box maxW="1400px" mx="auto" px={{ base: 4, md: 6 }}>
         <Flex h="64px" align="center" justify="space-between">
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <HStack gap={2}>
-              <Box bg="green.600" color="white" rounded="lg" w={8} h={8} display="flex" alignItems="center" justifyContent="center" fontSize="sm" fontWeight={700}>C</Box>
+            <HStack gap={2} align="center">
+              <Image src="/crmboo-logo.png" alt="CRMBoo" width={36} height={36} style={{ borderRadius: 8 }} />
               <Text fontWeight={800} fontSize="lg" color="gray.900" letterSpacing="-0.5px">CRMBoo</Text>
             </HStack>
           </Link>

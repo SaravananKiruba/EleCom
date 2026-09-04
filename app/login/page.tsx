@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Text, Button, VStack, Input, Field, HStack } from '@chakra-ui/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -48,10 +49,9 @@ export default function LoginPage() {
       <Box w="full" maxW="400px">
         <Box textAlign="center" mb={8}>
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <HStack gap={2} justify="center" mb={4}>
-              <Box bg="green.600" color="white" rounded="xl" w={10} h={10} display="flex" alignItems="center" justifyContent="center" fontSize="lg" fontWeight={700}>C</Box>
-              <Text fontWeight={800} fontSize="xl" color="gray.900">CRMBoo</Text>
-            </HStack>
+            <Box display="flex" justifyContent="center" mb={4}>
+              <Image src="/crmboo-logo.png" alt="CRMBoo" width={96} height={96} priority style={{ borderRadius: 16 }} />
+            </Box>
           </Link>
           <Text fontSize="2xl" fontWeight={700} color="gray.900">Sign In</Text>
           <Text fontSize="sm" color="gray.500" mt={1}>Enter your credentials to continue</Text>

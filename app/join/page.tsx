@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Text, Button, VStack, HStack, Input, Field, SimpleGrid, Separator } from '@chakra-ui/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -82,6 +83,11 @@ export default function JoinPage() {
     <Box minH="100vh" bg="gray.50" py={10} px={4}>
       <Box w="full" maxW="640px" mx="auto">
         <Box textAlign="center" mb={8}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <Box display="flex" justifyContent="center" mb={4}>
+              <Image src="/crmboo-logo.png" alt="CRMBoo" width={80} height={80} priority style={{ borderRadius: 14 }} />
+            </Box>
+          </Link>
           <Text fontSize="3xl" fontWeight={800} color="gray.900">Register Your Business</Text>
           <Text fontSize="sm" color="gray.500" mt={2}>
             Get your own CRM + ecommerce storefront. Free trial — no credit card needed.
